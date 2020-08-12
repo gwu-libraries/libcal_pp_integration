@@ -1,0 +1,5 @@
+LibCal:
+  client_id: 626
+  client_secret: 3fa520ce21bab7c1d81a15c9d0676e36
+  credentials_endpt: 'https://booking.library.gwu.edu/1.1/oauth/token'
+  bookings_endpt: 'https://booking.library.gwu.edu/1.1/space/bookings'
