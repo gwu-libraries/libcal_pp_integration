@@ -29,22 +29,22 @@ Development repo for API integration between LibCal and Passage Point
 
 1. Exception handling currently just prints to `stdout`. Need to add logging.
 2. Need to handle requests to PassagePoint to do the following:
- - Create new visitors.
- - Create new pre-registrations.
+   - Create new visitors.
+   - Create new pre-registrations.
 3. Need to implement logic to tie the components together as follows:
- - On startup, instantiate the SQLite db.
- - Query the LibCal API (`LibCalRequests.retrieve_bookings`).
- - Filter for appointments already in the db (`SQLiteCache.appt_lookup`).
- - For each user with a new appointment:
-   - Retrieve `visitor_id` if already in the db (`SQLiteCache.lookup_user`).
- - For users not in the db:
-   - Get their barcodes from Alma (`AlmaRequests.main`) -- can be done in bulk.
-   - Create users in PassagePoint.
-   - Save new user mappings to the db (`SQLiteCache.add_users`).
- - For each new appointment:
-   - Create the prereg in PassagePoint.
-   - Save the appointment mapping to the db (`SQLiteCache.add_appt`).
+   - On startup, instantiate the SQLite db.
+   - Query the LibCal API (`LibCalRequests.retrieve_bookings`).
+   - Filter for appointments already in the db (`SQLiteCache.appt_lookup`).
+   - For each user with a new appointment:
+     - Retrieve `visitor_id` if already in the db (`SQLiteCache.lookup_user`).
+   - For users not in the db:
+     - Get their barcodes from Alma (`AlmaRequests.main`) -- can be done in bulk.
+     - Create users in PassagePoint.
+     - Save new user mappings to the db (`SQLiteCache.add_users`).
+   - For each new appointment:
+     - Create the prereg in PassagePoint.
+     - Save the appointment mapping to the db (`SQLiteCache.add_appt`).
 4. If running all of the above in a loop, we may need logic to check for an expire auth token for LibCal and PassagePoint. 
- - For LibCal, it might be easiest just to get a new token before each call to the bookings API. (`LibCalRequests` is currently written to do so on init).
- - Not sure about PassagePoint.
+   - For LibCal, it might be easiest just to get a new token before each call to the bookings API. (`LibCalRequests` is currently written to do so on init).
+   - Not sure about PassagePoint.
 5. To keep the size of the db in check, we may want periodically to delete rows with past appointments. We could implement by adding a timestamp column. 
