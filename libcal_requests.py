@@ -1,6 +1,6 @@
 import requests
-import yaml
 from utils import load_config
+from typing import Dict
 
 class LibCalRequests():
 
@@ -9,16 +9,28 @@ class LibCalRequests():
 
         load_config(config_path=config_path, 
                     top_level_key='LibCal', 
-                    config_keys=['client_id', 'client_secret', 'credentials_endpt', 'bookings_endpt'],
+                    config_keys=['client_id', 'client_secret', 'credentials_endpt', 'bookings_endpt', 'locations', 'primary_id_field'],
                     obj=self)
         self.fetch_token()
-        print(self.get_bookings())
 
+    def retrieve_bookings_by_location(self):
+        '''Loops through locations provided in the config file to retrieve the bookings associated with each.'''
+        bookings = []
+        for location in self.locations:
+            try:
+                booking = self.get_bookings(location)
+                bookings.extend(booking)
+            except Exception as e:
+                # TO DO: Log exceptions
+                print(f'Failed to get bookings for {location["name"]}')
+                print(e)
+        return bookings
 
-    def get_bookings(self):
-        '''Fetches the space appointments for today\'s date (default).'''
+    def get_bookings(self, location: Dict):
+        '''Fetches the space appointments for today\'s date (default).
+        location argument should be a dictionary with keys "name" and "id" from the config file.'''
         try:
-            headers, params = self.prepare_bookings_req()
+            headers, params = self.prepare_bookings_req(location)
             resp = requests.get(self.bookings_endpt, 
                                 headers=headers,
                                 params=params)
@@ -32,10 +44,13 @@ class LibCalRequests():
             print('Error fetching bookings data.')
             raise
 
-    def prepare_bookings_req(self):
-        '''Creates the authentication header and the default parameters for the LibCal bookings calls.'''
+    def prepare_bookings_req(self, location: Dict):
+        '''Creates the authentication header and the default parameters for the LibCal bookings calls.
+        location argument should be a dictionary with keys "name" and "id." The id field is used to pass the location to the bookings query.'''
         header = {'Authorization': f'Bearer {self.token}'}
-        params = {'limit': 100} # Max value
+        params = {'limit': 100,             # Max value
+                'lid': location['id'],
+                'formAnswers': 1} # Includes additional form fields 
         return header, params
 
     def fetch_token(self):
@@ -60,3 +75,5 @@ class LibCalRequests():
             
 if __name__ == '__main__':
     libcal = LibCalRequests('config.yml')
+    bookings = libcal.retrieve_bookings_by_location()
+    print(bookings)
