@@ -1,8 +1,14 @@
 LibCal:
   client_id: 
   client_secret: 
+  locations:
+    - name: 'Gelman Library Study Spaces'
+      id: 8827
+    - name: 'CREATE Digital Studio'
+      id: 8874
   credentials_endpt: 'https://booking.library.gwu.edu/1.1/oauth/token'
   bookings_endpt: 'https://booking.library.gwu.edu/1.1/space/bookings'
+  primary_id_field: q12505
 Alma:
   apikey: 
   users_endpt: 'https://api-na.hosted.exlibrisgroup.com/almaws/v1/users'

@@ -1,10 +1,10 @@
 import asyncio
 import aiohttp
-from utils import load_config
+from aiohttp import ClientResponseError 
+from utils import load_config, partition
 from asyncio_throttle import Throttler
 from typing import List
-from utils import partition
-from aiohttp import ClientResponseError 
+
 
 class AlmaRequests():
 
@@ -22,14 +22,15 @@ class AlmaRequests():
 
     def _extract_barcodes(self, users: List):
         '''Given a list of user objects, extract a mapping from primary ID to barcode.'''
-        mapping = {}
+        mapping = []
         for user in users:
             primary_id = user['primary_id']
             idents = user['user_identifier']
             for ident in idents:    # Each user has more than one identifier
                 if ident['id_type']['value'] == 'BARCODE':
                     barcode = ident['value']
-                    mapping[primary_id] = barcode
+                    mapping.append({'primary_id': primary_id,
+                                    'barcode': barcode})
                     break # Once we've found the barcode, move to the next user
         return mapping
 
