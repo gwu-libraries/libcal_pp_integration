@@ -1,9 +1,50 @@
 # libcal_pp_integration
 Development repo for API integration between LibCal and Passage Point
 
-1. The endpoint to retrieve the room reservations from LibCal is `https://booking.library.gwu.edu/1.1/space/bookings`. 
-2. It's possible to add a specific date as a querystring parameter; otherwise, the default is today's date.
-3. It looks as though it's possible to retrieve additional information from the user's request form with the formAnswers parameter; we could test that for obtaining the barcode and GWID.
-4. I don't see anything about rate limits. 
-5. Limit of results per request is 100, which may be just fine if we're querying as frequently as Jennifer has proposed.
-6. I note that the form currently covers spaces in both Gelman and VSTC. Do we need to filter the query/responses only to those locations in Gelman?
+## Application Components
+ - `libcal_requests.py`, which contains the `LibCalRequests` class. 
+   - On instantiation, pass the name of a config YAML file. (Default is `config.yml`, which should reside in the same directory as the module.)
+   - The `__init__` method gets a new auth token (using the supplied paramters in the config.)
+   - The `retrieve_bookings` method fetches the day's current bookings for the locations specified in the config.
+ - `alma_requests.py`, which contains the `AlmaRequests` class.
+   - Instantiation argument is the same as for `LibCalRequests`.
+   - Pass the `main` method a Python `list` of Alma Primary ID's (GWID numbers) to return the users' barcodes. Failed matches will be omitted from the returned results.
+ - `sqlite_cache.py`, which contains the `SQLiteCache` class.
+   - Instantiate with an optional name/path string for the database file.
+   - If not present, a new instance creates the `users` and `appts` tables.
+   - `add_user` accepts a list of dictionaries of the following structure:
+   `{'primary_id': 'GXXXXXXXX',
+	'barcode': '2282XXXXXXXXX',
+	'visitor_id': 'sdfjh3'}`
+	where `visitor_id` corresponds to the `id` returned by the `createVistor` endpoint of the PassagePoint API, and the other values are from Alma.
+   - `lookup_user` queries the database for a provided `primary_id` and returns the user's other identifiers (if found).
+   - `add_appt` accepts a single Python dictionary of the following structure:
+	`{'appt_id': 'yt54884',
+	  'prereg_id': '343234jf'}`
+	  where `appt_id` corresponds to the `bookId` from the LibCal API, and `prereg_id` corresponds to the `id` returned by the `createPreReg` endpoint in PassagePoint.
+   - `lookup_appt` queries the database for a single provided `appt_id` (LibCal's `bookId`) and returns the mapping to the PassagePoint ID.
+
+
+## Not Yet Implemented
+
+1. Exception handling currently just prints to `stdout`. Need to add logging.
+2. Need to handle requests to PassagePoint to do the following:
+ - Create new visitors.
+ - Create new pre-registrations.
+3. Need to implement logic to tie the components together as follows:
+ - On startup, instantiate the SQLite db.
+ - Query the LibCal API (`LibCalRequests.retrieve_bookings`).
+ - Filter for appointments already in the db (`SQLiteCache.appt_lookup`).
+ - For each user with a new appointment:
+   - Retrieve `visitor_id` if already in the db (`SQLiteCache.lookup_user`).
+ - For users not in the db:
+   - Get their barcodes from Alma (`AlmaRequests.main`) -- can be done in bulk.
+   - Create users in PassagePoint.
+   - Save new user mappings to the db (`SQLiteCache.add_users`).
+ - For each new appointment:
+   - Create the prereg in PassagePoint.
+   - Save the appointment mapping to the db (`SQLiteCache.add_appt`).
+4. If running all of the above in a loop, we may need logic to check for an expire auth token for LibCal and PassagePoint. 
+ - For LibCal, it might be easiest just to get a new token before each call to the bookings API. (`LibCalRequests` is currently written to do so on init).
+ - Not sure about PassagePoint.
+5. To keep the size of the db in check, we may want periodically to delete rows with past appointments. We could implement by adding a timestamp column. 

@@ -4,7 +4,7 @@ from typing import Dict
 
 class LibCalRequests():
 
-    def __init__(self, config_path: str):
+    def __init__(self, config_path: str = 'config.yml'):
         '''config_path should be a path to a config file in YAML format. Config should contain the client id and client secret for the LibCal API, as well as the authentication and bookings endpoints, all nested under a "LibCal" key. '''
 
         load_config(config_path=config_path, 
