@@ -1,5 +1,5 @@
 import sqlite3
-from sqlite3 import OperationalError, IntegrityError, Row
+from sqlite3 import OperationalError, Row
 from typing import Dict, List
 
 class SQLiteCache():
@@ -70,7 +70,7 @@ class SQLiteCache():
             print('Error querying appointments table.')
             raise
 
-    def add_users(self, user_data: List[Dict]):
+    def add_users(self, user_data: List[Dict[str, str]]):
         '''Adds users to the users table.
         user_data should be a list of dictionaries, each containing the user\'s Alma primary ID, barcode, and visitor ID (Passage Point).'''
         with self.conn:
@@ -84,18 +84,15 @@ class SQLiteCache():
                 print(f'Error loading users {user_data}')
                 raise
 
-    def add_appt(self, appt_data: Dict):
-        '''Insert a single mapping from LibCal to PassagePoint appointment IDs. 
+    def add_appt(self, appt_data: List[Dict[str, str]]):
+        '''Insert a list of mappings from LibCal to PassagePoint appointment IDs. 
         appt_data should contain appt_id (LibCal) and prereg_id (PP) as keys.'''
         with self.conn:
             try:
-                self.cursor.execute('''
+                self.cursor.executemany('''
                                         INSERT INTO appts (appt_id, prereg_id) 
                                         VALUES (:appt_id, :prereg_id)
                                     ''', appt_data)
-            except IntegrityError:
-                print(f'Primary key constraint invalid on {appd_data["appt_id"]}. This key is already in the database.')
-                raise
             except Exception as e:
                 print(f'Error loading appointments {appt_data}.')
                 raise 
