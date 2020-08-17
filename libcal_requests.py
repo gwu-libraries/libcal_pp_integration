@@ -39,6 +39,9 @@ class LibCalRequests():
             # Check for error in the JSON
             if 'error' in bookings:
                 raise Exception(f'Error returned by LibCal bookings API: {bookings}')
+            # Rename the primary ID field, which has a non-descriptive identifier in the LibCap API
+            for i, booking in enumerate(bookings):
+                bookings[i]['primary_id'] = booking.get(self.primary_id_field)
             return bookings
         except Exception as e:
             print('Error fetching bookings data.')
