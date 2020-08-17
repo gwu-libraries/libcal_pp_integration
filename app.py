@@ -38,8 +38,10 @@ class LibCal2PP():
         except Exception as e:
             LOG.error(f'Error retrieving new bookings -- {e}')
             return
+        LOG.debug(f'Bookings retrieved: {bookings}')
         # Filter out appointments already in the database
         new_bookings = [booking for booking in bookings if not self.cache.appt_lookup(booking['bookId'])]
+        LOG.debug(f'New bookings: {new_bookings}')
         # Get the user info we need for PassagePoint, registering any new users in the process
         users = self.process_users(new_bookings)
         # Add the VistorId for the Passage Point user to each appointment
@@ -98,7 +100,7 @@ class LibCal2PP():
             # Register the new users and get back their PassagePoint ID's
             registered_users = {user['primary_id']: user for user in self.register_new_users(new_users) if user}
             try:
-                LOG.debug('Adding newly registered users to the cache.')
+                LOG.debug(f'Adding newly registered users to the cache: {registered_users}.')
                 self.cache.add_users(registered_users.values())
             except Exception as e:
                 LOG.error(f'Error saving new users -- {e}')
@@ -108,7 +110,7 @@ class LibCal2PP():
 
     def register_new_users(self, new_users: Dict[str, Dict[str, str]]):
         '''new_users should be a dictionary whose keys are Alma Primary IDs and whose values are dictionaries containing additional information from LibCal required to register new users in PassagePoint.'''
-        LOG.debug(f'Getting new user info from Alma.')
+        LOG.debug(f'Getting new user info from Alma for {new_users}.')
         # AlmaRequest.main returns a dict mapping primary ID's to barcodes
         try:
             pid_to_barcode = self.alma.main(new_users.keys())
@@ -121,7 +123,7 @@ class LibCal2PP():
             new_user = new_users[pid]
             new_user['uniqueId'] = barcode
             try:
-                LOG.debug('Creating Passage Point user record.')
+                LOG.debug(f'Creating Passage Point user record: {new_user}.')
                 # Call to Passage Point API here
                 visitor_id = 'ABCD'
                 # Return the user info from Alma and PP
