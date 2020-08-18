@@ -38,6 +38,13 @@ class PassagePointRequests():
             print('Error fetching PassagePoint authentication token.', e)
             raise
 
+    def _extract_id(self, api_data: Dict):
+        '''Extracts the visitor ID(s) from the data returned from the createVisitor call.
+        api_data should have a top-level key called "data."'''
+        #TO DO: Handle situations where more than one data element is returned, if that ever happens.
+        data = api_data['data']
+        id_num = data[0]['id']
+        return id_num
 
     def create_visitor(self, visitor: dict):
         '''Sends a POST request to create a new visitor using a uniqueId'''
@@ -53,7 +60,7 @@ class PassagePointRequests():
             visitor_data = resp.json()
             if 'error' in visitor_data:
                 raise Exception(visitor_data)
-            return visitor_data
+            return self._extract_id(visitor_data)
         except Exception as e:
             print('Error getting visitor.', e)
             raise
@@ -96,7 +103,7 @@ class PassagePointRequests():
             prereg_data = resp.json()
             if 'error' in prereg_data:
                 raise Exception(prereg_data)
-            return prereg_data
+            return self._extract_id(prereg_data)
         except Exception as e:
             print('Error creating pre-registration.', e)
             raise
