@@ -12,3 +12,12 @@ LibCal:
 Alma:
   apikey: 
   users_endpt: 'https://api-na.hosted.exlibrisgroup.com/almaws/v1/users'
+PassagePoint:
+  username: 
+  password: 
+  pp_api_root: 'https://passagepoint.at.gwu.edu:2444'
+  login_endpt: '/pp/api/v2/auth/login'
+  uniqueId_endpt: '/pp/api/v2/person/byUniqueId'
+  create_visitor_endpt: '/pp/api/v2/person/createVisitor'
+  create_prereg_endpt: '/pp/api/v2/visit/createPreReg'
+  get_destinations_endpt: 'pp/api/v2/visit/getDestinations'
