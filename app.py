@@ -1,10 +1,7 @@
 from libcal_requests import LibCalRequests
 from alma_requests import AlmaRequests
 from sqlite_cache import SQLiteCache
-<<<<<<< HEAD
 from pp_requests import PassagePointRequests
-=======
->>>>>>> b3de1eaf35decb3feb7cdf2c5ec318459d50cb87
 import logging
 import argparse
 from typing import Dict, List
@@ -142,7 +139,7 @@ class LibCal2PP():
             except Exception as e:
                 LOG.error(f'Error creating user for user {pid} -- {e}')
                 continue
-                
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     # Accepts an option --debug flag to set the log level to DEBUG (most verbose)
