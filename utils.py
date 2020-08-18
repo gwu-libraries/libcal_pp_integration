@@ -24,7 +24,7 @@ def load_config(config_path: str, top_level_key: str, config_keys: List[str], ob
         else:
             return config[top_level_key]
     except Exception as e:
-        print("Error loading configuration.")
+        print("Error loading configuration.", e)
         raise
 
 

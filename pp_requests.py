@@ -1,4 +1,5 @@
 import requests
+from datetime import datetime
 from utils import load_config
 from typing import Dict
 
@@ -34,7 +35,7 @@ class PassagePointRequests():
             self.token = token['token']
             return self
         except Exception as e:
-            print('Error fetching PassagePoint authentication token.')
+            print('Error fetching PassagePoint authentication token.', e)
             raise
 
 
@@ -80,7 +81,7 @@ class PassagePointRequests():
 
     def create_prereg(self, booking: dict, visitor: str):
         '''Creates a Pre-Registration with the visitor ID and LibCal data.
-        Requires a booking dict with a visitorId as int, startTime and endTime
+        Requires a booking dict with a visitorId, startTime and endTime
         '''
         try:
             format_str = '%Y-%m-%dT%H:%M:%S%z'
@@ -89,7 +90,7 @@ class PassagePointRequests():
             booking["visitorId"] = visitor
             booking["destination"] = "LibCal"  # needs to exist in PP
             resp = requests.post(self.pp_api_root + self.create_prereg_endpt,
-                                 headers=self.header,
+                                 headers=self.req_header,
                                  json=booking)
             resp.raise_for_status()
             prereg_data = resp.json()
@@ -115,10 +116,12 @@ class PassagePointRequests():
 
 
 if __name__ == '__main__':
-    passagept = PassagePointRequests('config.yml')
+    passagept = PassagePointRequests()
     print(passagept.token)
     print(passagept.req_header)
-    visitor_data = passagept.create_visitor({'firstName': 'Laura',
-                                             'lastName': 'Wrubel',
-                                             'barcode': '22222222222222'})
-    print(visitor_data)
+ #   visitor_data = passagept.create_visitor({'firstName': 'Test',
+ #                                            'lastName': 'Patron',
+ #                                            'barcode': '012301230123012301'})
+ #   print(visitor_data)
+    prereg = passagept.create_prereg({"startTime": "2020-08-22T20:05:00-04:00", "endTime": "2020-08-22T22:05:00-04:00"}, '137505764541138')
+    print(prereg)
