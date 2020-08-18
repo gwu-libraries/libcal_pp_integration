@@ -1,17 +1,21 @@
 from libcal_requests import LibCalRequests
 from alma_requests import AlmaRequests
 from sqlite_cache import SQLiteCache
+from pp_requests import PassagePointRequests
 import logging
 import argparse
 from typing import Dict, List
 
 
-# Configure logging level
-# We can override with a command-line arg
-logging.basicConfig(filename='./libcal2pp.log', format='%(asctime)s %(levelname)s:%(message)s')
+# Configure logging 
+#logging.basicConfig(filename='./libcal2pp.log')
 
 LOG = logging.getLogger('libcal2pp')
-
+# For output to terminal
+handler = logging.StreamHandler()
+formatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s')
+handler.setFormatter(formatter)
+LOG.addHandler(handler)
 
 class LibCal2PP():
 
@@ -26,6 +30,7 @@ class LibCal2PP():
             self.libcal = LibCalRequests(config_path)
             self.alma = AlmaRequests(config_path)
             self.cache = SQLiteCache()
+            self.pp = PassagePointRequests(config_path)
         except Exception as e:
             LOG.error(f'Error on init -- {e}')
 
@@ -44,6 +49,9 @@ class LibCal2PP():
         LOG.debug(f'New bookings: {new_bookings}')
         # Get the user info we need for PassagePoint, registering any new users in the process
         users = self.process_users(new_bookings)
+        # If no valid users, exit
+        if not users:
+            return
         # Add the VistorId for the Passage Point user to each appointment
         LOG.debug(f'Creating new pre-registrations in Passage Point.')
         registrations = []
@@ -54,11 +62,10 @@ class LibCal2PP():
             if not visitor_id:
                 continue
             pre_reg = {'startTime': booking['fromDate'],
-                        'endTime': booking['toDate'],
-                            'visitorId': visitor_id}
+                        'endTime': booking['toDate']}
             try:
                 # Make call to Passage Point and get appointment Id
-                prereg_id = None
+                prereg_id = self.pp.create_prereg(pre_reg, visitor_id)
                 # Save the prereg Id for insertion into the cache
                 registrations.append({'prereg_id': prereg_id,
                                     'appt_id': booking['bookId']})
@@ -121,11 +128,11 @@ class LibCal2PP():
         for pid, barcode in pid_to_barcode.items():
             # Update the user info with the barcode from Alma
             new_user = new_users[pid]
-            new_user['uniqueId'] = barcode
+            new_user['barcode'] = barcode
             try:
                 LOG.debug(f'Creating Passage Point user record: {new_user}.')
                 # Call to Passage Point API here
-                visitor_id = 'ABCD'
+                visitor_id = self.pp.create_visitor(new_user)
                 # Return the user info from Alma and PP
                 yield {'visitor_id': visitor_id,
                         'primary_id': pid,
@@ -133,7 +140,6 @@ class LibCal2PP():
             except Exception as e:
                 LOG.error(f'Error creating user for user {pid} -- {e}')
                 continue
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
