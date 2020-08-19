@@ -30,7 +30,7 @@ Development repo for API integration between LibCal and Passage Point
      2. Filters out those that are already in the SQL cache. (These will already have been registered with PassagePoint.)
      3. Calls `process_users` to obtain the PassagePoint VisitorId's.
      4. Creates PassagePoint metadata for new pre-registrations, using the LibCal booking data and the PassagePoint VisitorId.
-     5. **Not Yet Implemented** Makes a call to `PassagePointRequests` to create each pre-reg.
+     5. Makes a call to `PassagePointRequests` to create each pre-reg.
      6. Records these pre-regs in the SQL cache.
    - `process_users` does the following:
      1. Separates the users with new LibCal appointments into those already in the SQL cache (users with PassagePoint accounts) and those needing to have accounts created.
