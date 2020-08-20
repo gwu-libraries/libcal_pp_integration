@@ -38,7 +38,7 @@ class PassagePointRequests():
             self.token = token['token']
             return self
         except Exception as e:
-            self.logger.error('Error fetching PassagePoint authentication token.', e)
+            self.logger.error(f'Error fetching PassagePoint authentication token -- {e}')
             raise
 
     def _extract_id(self, api_data: Dict):
@@ -65,11 +65,15 @@ class PassagePointRequests():
                 raise Exception(visitor_data)
             return self._extract_id(visitor_data)
         except HTTPError:
-            self.logger.error(f'Error in calling createVisitor API: {resp.reason}')
-            self.logger.error(f'Response body: {resp.text}')
-            raise
+            if 'ALREADY_EXIST_UNIQUE_ID' in resp.text:
+                # If the request fails because the visitor has already been created, try to get the Visitor ID
+                return self.get_visitor_bybarcode(visitor['barcode'])
+            else:
+                self.logger.error(f'Error in calling createVisitor API: {resp.reason}')
+                self.logger.error(f'Response body: {resp.text}')
+                raise
         except Exception as e:
-            self.logger.error('Error creating visitor.', e)
+            self.logger.error(f'Error creating visitor in PassagePoint for barcode {barcode} -- {e}')
             raise
 
 
@@ -82,14 +86,9 @@ class PassagePointRequests():
                                 params=params)
             resp.raise_for_status()
             visitor_data = resp.json()
-            if (not visitor_data) or ('id' not in visitor_data[0]):
-                raise Exception(visitor_data)
-            if len(visitor_data) > 1:  # TODO: consider what do when multiple users returned
-                raise Exception(visitor_data)
-            visitor_id = str(visitor_data[0]['id'])
-            return visitor_id
+            return self._extract_id(visitor_data)
         except Exception as e:
-            print('Error getting visitor.', e)
+            print(f'Error getting visitor from PassagePoint with barcode {barcode} -- {e}')
             raise
 
 
@@ -116,7 +115,7 @@ class PassagePointRequests():
             self.logger.error(f'Response body: {resp.text}')
             raise     
         except Exception as e:
-            print('Error creating pre-registration.', e)
+            print(f'Error creating pre-registration for booking {booking} -- {e}')
             raise
 
 
@@ -129,7 +128,7 @@ class PassagePointRequests():
             destinations = resp.json()
             return destinations
         except Exception as e:
-            print('Error getting visitor.', e)
+            print(f'Error getting PassagePoint destinations -- {e}')
             raise
 
 
