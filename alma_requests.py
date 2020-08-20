@@ -47,7 +47,7 @@ class AlmaRequests():
     async def _retrieve_user_records(self, user_ids: List[str]):
         '''Given a list of user IDs, retrieve the barcodes from Alma. Async method that gathers calls to fetch_user concurrently.'''
         async with aiohttp.ClientSession() as client:
-            queries = [self._fetch_user(user_id, client) for user_id in user_ids]
+            queries = [self._fetch_user(user_id, client) for user_id in user_ids if user_id]
             results =  await asyncio.gather(*queries, return_exceptions=True)
         return results
 
