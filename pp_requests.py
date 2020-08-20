@@ -2,6 +2,8 @@ import requests
 from datetime import datetime
 from utils import load_config
 from typing import Dict
+import logging
+from requests.exceptions import HTTPError
 
 class PassagePointRequests():
 
@@ -17,6 +19,7 @@ class PassagePointRequests():
                     obj=self)
         self.fetch_token()
         self.req_header = {'token': self.token, 'Content Type': 'application/json'}
+        self.logger = logging.getLogger('pp_requests.py')
 
 
     def fetch_token(self):
@@ -35,7 +38,7 @@ class PassagePointRequests():
             self.token = token['token']
             return self
         except Exception as e:
-            print('Error fetching PassagePoint authentication token.', e)
+            self.logger.error('Error fetching PassagePoint authentication token.', e)
             raise
 
     def _extract_id(self, api_data: Dict):
@@ -61,8 +64,12 @@ class PassagePointRequests():
             if 'error' in visitor_data:
                 raise Exception(visitor_data)
             return self._extract_id(visitor_data)
+        except HTTPError:
+            self.logger.error(f'Error in calling createVisitor API: {resp.reason}')
+            self.logger.error(f'Response body: {resp.text}')
+            raise
         except Exception as e:
-            print('Error getting visitor.', e)
+            self.logger.error('Error creating visitor.', e)
             raise
 
 
@@ -104,6 +111,10 @@ class PassagePointRequests():
             if 'error' in prereg_data:
                 raise Exception(prereg_data)
             return self._extract_id(prereg_data)
+        except HTTPError:
+            self.logger.error(f'Error in calling createPreReg API: {resp.reason}')  
+            self.logger.error(f'Response body: {resp.text}')
+            raise     
         except Exception as e:
             print('Error creating pre-registration.', e)
             raise

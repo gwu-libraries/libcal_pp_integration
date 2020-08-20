@@ -9,10 +9,10 @@ from typing import Dict, List
 # Configure logging 
 #logging.basicConfig(filename='./libcal2pp.log')
 
-LOG = logging.getLogger('libcal2pp')
+LOG = logging.getLogger('app.py')
 # For output to terminal
 handler = logging.StreamHandler()
-formatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s')
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s:%(message)s')
 handler.setFormatter(formatter)
 LOG.addHandler(handler)
 
@@ -42,7 +42,7 @@ class LibCal2PP():
         except Exception as e:
             LOG.error(f'Error retrieving new bookings -- {e}')
             return
-        LOG.debug(f'Bookings retrieved: {bookings}')
+        LOG.debug(f'Bookings retrieved: {len(bookings)}')
         # Filter out appointments already in the database
         new_bookings = [booking for booking in bookings if not self.cache.appt_lookup(booking['bookId'])]
         LOG.debug(f'New bookings: {new_bookings}')
@@ -52,7 +52,6 @@ class LibCal2PP():
         if not users:
             return
         # Add the VistorId for the Passage Point user to each appointment
-        LOG.debug(f'Creating new pre-registrations in Passage Point.')
         registrations = []
         for booking in new_bookings:
             primary_id = booking['primary_id']
@@ -63,6 +62,7 @@ class LibCal2PP():
             pre_reg = {'startTime': booking['fromDate'],
                         'endTime': booking['toDate']}
             try:
+                LOG.debug(f'Creating new pre-registration in Passage Point for visitor {visitor_id}.')
                 # Make call to Passage Point and get appointment Id
                 prereg_id = self.pp.create_prereg(pre_reg, visitor_id)
                 # Save the prereg Id for insertion into the cache
@@ -106,7 +106,7 @@ class LibCal2PP():
             # Register the new users and get back their PassagePoint ID's
             registered_users = {user['primary_id']: user for user in self.register_new_users(new_users) if user}
             try:
-                LOG.debug(f'Adding newly registered users to the cache: {registered_users}.')
+                LOG.debug(f'Adding newly registered users to the cache.')
                 self.cache.add_users(registered_users.values())
             except Exception as e:
                 LOG.error(f'Error saving new users -- {e}')
@@ -116,7 +116,7 @@ class LibCal2PP():
 
     def register_new_users(self, new_users: Dict[str, Dict[str, str]]):
         '''new_users should be a dictionary whose keys are Alma Primary IDs and whose values are dictionaries containing additional information from LibCal required to register new users in PassagePoint.'''
-        LOG.debug(f'Getting new user info from Alma for {new_users}.')
+        LOG.debug(f'Getting new user info from Alma for {list(new_users.keys())}.')
         # AlmaRequest.main returns a dict mapping primary ID's to barcodes
         try:
             pid_to_barcode = self.alma.main(new_users.keys())
@@ -129,7 +129,7 @@ class LibCal2PP():
             new_user = new_users[pid]
             new_user['barcode'] = barcode
             try:
-                LOG.debug(f'Creating Passage Point user record: {new_user}.')
+                LOG.debug(f'Creating Passage Point user record: {pid}.')
                 # Call to Passage Point API here
                 visitor_id = self.pp.create_visitor(new_user)
                 # Return the user info from Alma and PP
