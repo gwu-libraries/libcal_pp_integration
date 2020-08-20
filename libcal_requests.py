@@ -1,6 +1,9 @@
 import requests
 from utils import load_config
 from typing import Dict
+from requests.exceptions import HTTPError
+import logging
+
 
 class LibCalRequests():
 
@@ -12,6 +15,8 @@ class LibCalRequests():
                     config_keys=['client_id', 'client_secret', 'credentials_endpt', 'bookings_endpt', 'locations', 'primary_id_field'],
                     obj=self)
         self.fetch_token()
+        self.logger = logging.getLogger('libcal_requests.py')
+
 
     def retrieve_bookings_by_location(self):
         '''Loops through locations provided in the config file to retrieve the bookings associated with each.'''
@@ -21,14 +26,13 @@ class LibCalRequests():
                 booking = self.get_bookings(location)
                 bookings.extend(booking)
             except Exception as e:
-                # TO DO: Log exceptions
-                print(f'Failed to get bookings for {location["name"]}')
-                print(e)
+                self.logger.error(f'Failed to get bookings for {location["name"]} -- {e}')
         return bookings
 
-    def get_bookings(self, location: Dict):
+    def get_bookings(self, location: Dict, retry: bool = False):
         '''Fetches the space appointments for today\'s date (default).
-        location argument should be a dictionary with keys "name" and "id" from the config file.'''
+        location argument should be a dictionary with keys "name" and "id" from the config file.
+        retry is a flag to manage the need to retry the request after refreshing the token. If retry is true, the call will not be retried again.'''
         try:
             headers, params = self.prepare_bookings_req(location)
             resp = requests.get(self.bookings_endpt, 
@@ -43,8 +47,16 @@ class LibCalRequests():
             for i, booking in enumerate(bookings):
                 bookings[i]['primary_id'] = booking.get(self.primary_id_field)
             return bookings
+        except HTTPError:
+            # Test for expired token
+            if (resp.reason == 'Unauthorized') and not retry:
+                self.fetch_token()
+                return self.get_bookings(location, retry=True)
+            self.logger.error(f'Error calling space/bookings API - {resp.reason}')
+            self.logger.error(f'Error response: {resp.text}')
+            raise
         except Exception as e:
-            print('Error fetching bookings data.')
+            self.logger.error(f'Error fetching bookings data. -- {e}')
             raise
 
     def prepare_bookings_req(self, location: Dict):
@@ -72,8 +84,12 @@ class LibCalRequests():
             # Store the access token string
             self.token = token['access_token']
             return self
+        except HTTPError:
+            self.logger.error(f'Error on LibCal authentication API: {resp.reason}')
+            self.logger.error(f'Error body: {resp.text}')
+            raise
         except Exception as e:
-            print('Error fetching LibCal authentication token.')
+            self.logger.error('Error fetching LibCal authentication token.')
             raise
             
 if __name__ == '__main__':
