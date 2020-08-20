@@ -67,6 +67,7 @@ class PassagePointRequests():
         except HTTPError:
             if 'ALREADY_EXIST_UNIQUE_ID' in resp.text:
                 # If the request fails because the visitor has already been created, try to get the Visitor ID
+                self.logger.debug(f'Visitor {visitor['barcode']} already exists in PassagePoint; getting Visitor ID.')
                 return self.get_visitor_bybarcode(visitor['barcode'])
             else:
                 self.logger.error(f'Error in calling createVisitor API: {resp.reason}')

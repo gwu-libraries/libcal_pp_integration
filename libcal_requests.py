@@ -50,6 +50,7 @@ class LibCalRequests():
         except HTTPError:
             # Test for expired token
             if (resp.reason == 'Unauthorized') and not retry:
+                self.logger.debug('LibCal token expired. Fetching new token.')
                 self.fetch_token()
                 return self.get_bookings(location, retry=True)
             self.logger.error(f'Error calling space/bookings API - {resp.reason}')
