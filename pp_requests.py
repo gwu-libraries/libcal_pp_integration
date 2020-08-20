@@ -70,7 +70,7 @@ class PassagePointRequests():
                 return self.get_visitor_bybarcode(visitor['barcode'])
             else:
                 self.logger.error(f'Error in calling createVisitor API: {resp.reason}')
-                self.logger.error(f'Response body: {resp.text}')
+                self.logger.error(f'Error response: {resp.text}')
                 raise
         except Exception as e:
             self.logger.error(f'Error creating visitor in PassagePoint for barcode {barcode} -- {e}')
