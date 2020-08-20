@@ -69,7 +69,6 @@ class LibCal2PP():
                 registrations.append({'prereg_id': prereg_id,
                                     'appt_id': booking['bookId']})
             except Exception as e:
-                LOG.error(f'Error creating pre_reg for appointment {booking} -- {e}')
                 continue
         if registrations:
             LOG.debug('Saving new pre-registrations to cache.')
@@ -137,7 +136,6 @@ class LibCal2PP():
                         'primary_id': pid,
                         'barcode': barcode}
             except Exception as e:
-                LOG.error(f'Error creating user for user {pid} -- {e}')
                 continue
 
 if __name__ == '__main__':
