@@ -2,6 +2,8 @@ import requests
 from datetime import datetime
 from utils import load_config
 from typing import Dict
+import logging
+from requests.exceptions import HTTPError
 
 class PassagePointRequests():
 
@@ -17,6 +19,7 @@ class PassagePointRequests():
                     obj=self)
         self.fetch_token()
         self.req_header = {'token': self.token, 'Content Type': 'application/json'}
+        self.logger = logging.getLogger('pp_requests.py')
 
 
     def fetch_token(self):
@@ -35,9 +38,16 @@ class PassagePointRequests():
             self.token = token['token']
             return self
         except Exception as e:
-            print('Error fetching PassagePoint authentication token.', e)
+            self.logger.error(f'Error fetching PassagePoint authentication token -- {e}')
             raise
 
+    def _extract_id(self, api_data: Dict):
+        '''Extracts the visitor ID(s) from the data returned from the createVisitor call.
+        api_data should have a top-level key called "data."'''
+        #TO DO: Handle situations where more than one data element is returned, if that ever happens.
+        data = api_data['data']
+        id_num = data[0]['id']
+        return id_num
 
     def create_visitor(self, visitor: dict):
         '''Sends a POST request to create a new visitor using a uniqueId'''
@@ -53,9 +63,18 @@ class PassagePointRequests():
             visitor_data = resp.json()
             if 'error' in visitor_data:
                 raise Exception(visitor_data)
-            return visitor_data
+            return self._extract_id(visitor_data)
+        except HTTPError:
+            if 'ALREADY_EXIST_UNIQUE_ID' in resp.text:
+                # If the request fails because the visitor has already been created, try to get the Visitor ID
+                self.logger.debug(f'Visitor {visitor["barcode"]} already exists in PassagePoint; getting Visitor ID.')
+                return self.get_visitor_bybarcode(visitor['barcode'])
+            else:
+                self.logger.error(f'Error in calling createVisitor API: {resp.reason}')
+                self.logger.error(f'Error response: {resp.text}')
+                raise
         except Exception as e:
-            print('Error getting visitor.', e)
+            self.logger.error(f'Error creating visitor in PassagePoint for barcode {visitor["barcode"]} -- {e}')
             raise
 
 
@@ -68,14 +87,9 @@ class PassagePointRequests():
                                 params=params)
             resp.raise_for_status()
             visitor_data = resp.json()
-            if (not visitor_data) or ('id' not in visitor_data[0]):
-                raise Exception(visitor_data)
-            if len(visitor_data) > 1:  # TODO: consider what do when multiple users returned
-                raise Exception(visitor_data)
-            visitor_id = str(visitor_data[0]['id'])
-            return visitor_id
+            return self._extract_id(visitor_data)
         except Exception as e:
-            print('Error getting visitor.', e)
+            print(f'Error getting visitor from PassagePoint with barcode {barcode} -- {e}')
             raise
 
 
@@ -96,9 +110,13 @@ class PassagePointRequests():
             prereg_data = resp.json()
             if 'error' in prereg_data:
                 raise Exception(prereg_data)
-            return prereg_data
+            return self._extract_id(prereg_data)
+        except HTTPError:
+            self.logger.error(f'Error in calling createPreReg API: {resp.reason}')  
+            self.logger.error(f'Response body: {resp.text}')
+            raise     
         except Exception as e:
-            print('Error creating pre-registration.', e)
+            print(f'Error creating pre-registration for booking {booking} -- {e}')
             raise
 
 
@@ -111,7 +129,7 @@ class PassagePointRequests():
             destinations = resp.json()
             return destinations
         except Exception as e:
-            print('Error getting visitor.', e)
+            print(f'Error getting PassagePoint destinations -- {e}')
             raise
 
 
