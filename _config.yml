@@ -4,8 +4,8 @@ LibCal:
   locations:
     - name: 'Gelman Library Study Spaces'
       id: 8827
-    - name: 'CREATE Digital Studio'
-      id: 8874
+    - name: 'Virginia Science & Technology Campus Library'
+      id: 10332
   credentials_endpt: 'https://booking.library.gwu.edu/1.1/oauth/token'
   bookings_endpt: 'https://booking.library.gwu.edu/1.1/space/bookings'
   primary_id_field: q12505
