@@ -15,7 +15,8 @@ class PassagePointRequests():
                     config_keys=['username', 'password', 'pp_api_root',
                                  'login_endpt', 'create_visitor_endpt',
                                  'uniqueId_endpt', 'create_prereg_endpt',
-                                 'get_destinations_endpt'],
+                                 'get_destinations_endpt', 'user_mapping',
+                                 'location_mapping'],
                     obj=self)
         self.fetch_token()
         self.req_header = {'token': self.token, 'Content Type': 'application/json'}
@@ -52,7 +53,9 @@ class PassagePointRequests():
 
     def create_visitor(self, visitor: dict):
         '''Sends a POST request to create a new visitor using a uniqueId'''
-        params = {'category': 'Visitor',
+
+        # visitor['user_group'] should correspond to an Alma user group. Default is "Visitor"
+        params = {'category': self.user_mapping.get(visitor['user_group'], 'Visitor'),
                   'firstName': visitor['firstName'],
                   'lastName': visitor['lastName'],
                   'uniqueId': str(visitor['barcode'])}
@@ -103,7 +106,8 @@ class PassagePointRequests():
             booking["startTime"] = str(int(datetime.strptime(booking['startTime'], format_str).timestamp()))
             booking["endTime"] = str(int(datetime.strptime(booking['endTime'], format_str).timestamp()))
             booking["visitorId"] = str(visitor)
-            booking["destination"] = "LibCal"  # needs to exist in PP
+            # Map the LibCal location ID to its destination name in PassagePoint
+            booking["destination"] = self.location_mapping.get(booking['destination'])  # needs to exist in PP
             resp = requests.post(self.pp_api_root + self.create_prereg_endpt,
                                  headers=self.req_header,
                                  json=booking)
