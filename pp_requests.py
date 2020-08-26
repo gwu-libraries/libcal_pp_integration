@@ -45,8 +45,9 @@ class PassagePointRequests():
         '''Extracts the visitor ID(s) from the data returned from the createVisitor call.
         api_data should have a top-level key called "data."'''
         #TO DO: Handle situations where more than one data element is returned, if that ever happens.
-        data = api_data['data']
-        id_num = data[0]['id']
+        if isinstance(api_data, dict):
+            api_data = api_data['data']
+        id_num = api_data[0]['id']
         return id_num
 
     def create_visitor(self, visitor: dict):
@@ -54,7 +55,7 @@ class PassagePointRequests():
         params = {'category': 'Visitor',
                   'firstName': visitor['firstName'],
                   'lastName': visitor['lastName'],
-                  'uniqueId': visitor['barcode']}
+                  'uniqueId': str(visitor['barcode'])}
         try:
             resp = requests.post(self.pp_api_root + self.create_visitor_endpt,
                                  headers=self.req_header,
@@ -81,7 +82,7 @@ class PassagePointRequests():
     def get_visitor_bybarcode(self, barcode: str):
         '''Retrieves the visitor ID from PassagePoint for a provided barcode in the visitor's unique ID field.'''
         try:
-            params = {'uniqueId': barcode}
+            params = {'uniqueId': str(barcode)}
             resp = requests.get(self.pp_api_root + self.uniqueId_endpt,
                                 headers=self.req_header,
                                 params=params)
@@ -89,7 +90,7 @@ class PassagePointRequests():
             visitor_data = resp.json()
             return self._extract_id(visitor_data)
         except Exception as e:
-            print(f'Error getting visitor from PassagePoint with barcode {barcode} -- {e}')
+            self.logger.error(f'Error getting visitor from PassagePoint with barcode {barcode} -- {e}')
             raise
 
 
@@ -101,7 +102,7 @@ class PassagePointRequests():
             format_str = '%Y-%m-%dT%H:%M:%S%z'
             booking["startTime"] = str(int(datetime.strptime(booking['startTime'], format_str).timestamp()))
             booking["endTime"] = str(int(datetime.strptime(booking['endTime'], format_str).timestamp()))
-            booking["visitorId"] = visitor
+            booking["visitorId"] = str(visitor)
             booking["destination"] = "LibCal"  # needs to exist in PP
             resp = requests.post(self.pp_api_root + self.create_prereg_endpt,
                                  headers=self.req_header,
@@ -116,7 +117,7 @@ class PassagePointRequests():
             self.logger.error(f'Response body: {resp.text}')
             raise     
         except Exception as e:
-            print(f'Error creating pre-registration for booking {booking} -- {e}')
+            self.logger.error(f'Error creating pre-registration for booking {booking} -- {e}')
             raise
 
 
@@ -129,7 +130,7 @@ class PassagePointRequests():
             destinations = resp.json()
             return destinations
         except Exception as e:
-            print(f'Error getting PassagePoint destinations -- {e}')
+            self.logger.error(f'Error getting PassagePoint destinations -- {e}')
             raise
 
 
