@@ -43,7 +43,7 @@ class LibCal2PP():
             LOG.error(f'Error retrieving new bookings -- {e}')
             return
         LOG.debug(f'Bookings retrieved: {len(bookings)}')
-        # Filter out appointments already in the database
+        # Filter out appointments already in the database 
         new_bookings = [booking for booking in bookings if not self.cache.appt_lookup(booking['bookId'])]
         LOG.debug(f'New bookings: {new_bookings}')
         # Get the user info we need for PassagePoint, registering any new users in the process
@@ -59,8 +59,10 @@ class LibCal2PP():
             # User not registered -- skip
             if not visitor_id:
                 continue
+            # Create the prereg data, using the LibCal timestamps and location ID
             pre_reg = {'startTime': booking['fromDate'],
-                        'endTime': booking['toDate']}
+                        'endTime': booking['toDate'],
+                        'destination': booking['lid']}
             try:
                 LOG.debug(f'Creating new pre-registration in Passage Point for visitor {visitor_id}.')
                 # Make call to Passage Point and get appointment Id
@@ -118,24 +120,25 @@ class LibCal2PP():
         LOG.debug(f'Getting new user info from Alma for {list(new_users.keys())}.')
         # AlmaRequest.main returns a dict mapping primary ID's to barcodes
         try:
-            pid_to_barcode = self.alma.main(new_users.keys())
+            pid_to_users = self.alma.main(new_users.keys())
         except Exception as e:
             LOG.error(f'Error fetching user data for new users -- {e}')
             return None
         # Register new PassagePoint users -- function should return for each user, their Visitor Id
-        for pid, barcode in pid_to_barcode.items():
-            # Update the user info with the barcode from Alma
+        for pid, user in pid_to_users.items():
+            # Update the user info with the barcode and user_group from Alma
             new_user = new_users[pid]
-            new_user['barcode'] = barcode
+            new_user.update(user) 
             try:
-                LOG.debug(f'Creating Passage Point user record: {pid}.')
+                LOG.debug(f'Creating PassagePoint visitor record: {pid}.')
                 # Call to Passage Point API here
                 visitor_id = self.pp.create_visitor(new_user)
                 # Return the user info from Alma and PP
                 yield {'visitor_id': visitor_id,
                         'primary_id': pid,
-                        'barcode': barcode}
+                        'barcode': user['barcode']}
             except Exception as e:
+                self.logger.error(f'Error creating PassagePoint visitor record for user {pid} -- {e}')
                 continue
 
 if __name__ == '__main__':

@@ -21,3 +21,13 @@ PassagePoint:
   create_visitor_endpt: '/pp/api/v2/person/createVisitor'
   create_prereg_endpt: '/pp/api/v2/visit/createPreReg'
   get_destinations_endpt: 'pp/api/v2/visit/getDestinations'
+  location_mapping:
+      8827: 'LibCal Gelman'
+      10332: 'LibCal VSTCL'
+  user_mapping:
+    gw und: Student
+    gw grad: Student
+    gw fac: Faculty
+    gw stf1: Staff
+    gw stf2: Staff
+    gw ocg: Student

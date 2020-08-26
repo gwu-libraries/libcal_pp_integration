@@ -3,7 +3,8 @@ import aiohttp
 from aiohttp import ClientResponseError 
 from utils import load_config, partition
 from asyncio_throttle import Throttler
-from typing import List
+from typing import List, Dict
+import logging
 
 
 class AlmaRequests():
@@ -19,29 +20,38 @@ class AlmaRequests():
                         'Accept': 'application/json'}
         # Initialize throttler for Alma's rate limit
         self.throttler = Throttler(rate_limit=25)
+        self.logger = logging.getLogger('alma_requests.py')
 
-    def _extract_barcodes(self, users: List):
+    def _extract_info(self, users: List):
         '''Given a list of user objects, extract a mapping from primary ID to barcode.'''
         mapping = {}
         for user in users:
             primary_id = user['primary_id']
+            mapping[primary_id] = {'user_group': self._extract_user_group(user)}
             idents = user['user_identifier']
             for ident in idents:    # Each user has more than one identifier
                 if ident['id_type']['value'] == 'BARCODE':
                     barcode = ident['value']
-                    mapping[primary_id] = barcode
+                    mapping[primary_id]['barcode'] = barcode
                     break # Once we've found the barcode, move to the next user
         return mapping
+
+    def _extract_user_group(self, user: Dict):
+        '''Given a user object, extract the user group.'''
+        user_group = user.get('user_group')
+        if user_group:
+            return user_group.get('desc')
+        return user_group
 
     def main(self, user_ids: List[str]):
         '''Function to run async loop. Argument should be a list of user IDs to retrieve in Alma.'''
         results = asyncio.run(self._retrieve_user_records(user_ids))
         # Valid results have the record_type key
         errors, results = partition(lambda x: 'record_type' in x, results)
-        # Extract barcodes as mapping to user IDs
-        barcodes = self._extract_barcodes(results)
-        print(f'Errors: {list(errors)}') # TO DO: log these somewhere
-        return barcodes
+        # Extract barcodes and user groups as mapping to user IDs
+        user_data = self._extract_info(results)
+        self.logger.error(f'Errors: {list(errors)}') # TO DO: log these somewhere
+        return user_data
 
 
     async def _retrieve_user_records(self, user_ids: List[str]):
@@ -64,11 +74,11 @@ class AlmaRequests():
                     return result
         # Return exceptions to the asyncio.gather call
         except ClientResponseError as e:
-            print(f'Query to Alma API failed on user {user_id}')
+            self.logger.error(f'Query to Alma API failed on user {user_id}')
             return {'Error Code': e.status, 'User ID': user_id, 
                     'Error Msg': e.message}
         except Exception as e:
-            print(f'Query to Alma API failed on user {user_id}')
+            self.logger.error(f'Query to Alma API failed on user {user_id}')
             return {'Error': e, 'User ID': user_id}
 
 

@@ -29,6 +29,12 @@ class LibCalRequests():
                 self.logger.error(f'Failed to get bookings for {location["name"]} -- {e}')
         return bookings
 
+    def check_status(self, booking: Dict):
+        '''To filter out bookings with particular kinds of statuses.'''
+        if 'Cancelled' in booking:
+            return False
+        return True
+
     def get_bookings(self, location: Dict, retry: bool = False):
         '''Fetches the space appointments for today\'s date (default).
         location argument should be a dictionary with keys "name" and "id" from the config file.
@@ -39,13 +45,18 @@ class LibCalRequests():
                                 headers=headers,
                                 params=params)
             resp.raise_for_status()
-            bookings = resp.json()
+            data = resp.json()
             # Check for error in the JSON
-            if 'error' in bookings:
+            if 'error' in data:
                 raise Exception(f'Error returned by LibCal bookings API: {bookings}')
+            bookings = []
+            # Filter out cancelled bookings
             # Rename the primary ID field, which has a non-descriptive identifier in the LibCap API
-            for i, booking in enumerate(bookings):
-                bookings[i]['primary_id'] = booking.get(self.primary_id_field)
+            for booking in data:
+                if not self.check_status(booking['status']):
+                    continue
+                booking['primary_id'] = booking.get(self.primary_id_field)
+                bookings.append(booking)
             return bookings
         except HTTPError:
             # Test for expired token
