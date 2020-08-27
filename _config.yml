@@ -31,3 +31,10 @@ PassagePoint:
     gw stf1: Staff
     gw stf2: Staff
     gw ocg: Student
+Emails:
+  from_email: 
+  from_username: 
+  from_password: 
+  smtp_host: 
+  # list of email address strings
+  to_email: 

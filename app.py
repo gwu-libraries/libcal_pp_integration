@@ -1,20 +1,32 @@
+import argparse
+import logging
+from logging.handlers import SMTPHandler
+from typing import Dict, List
+
 from libcal_requests import LibCalRequests
 from alma_requests import AlmaRequests
 from sqlite_cache import SQLiteCache
 from pp_requests import PassagePointRequests
-import logging
-import argparse
-from typing import Dict, List
+from utils import load_config
 
 # Configure logging 
 #logging.basicConfig(filename='./libcal2pp.log')
-
+email_config = load_config(config_path='./config.yml', 
+                           top_level_key='Emails', 
+                           config_keys=['from_email', 'from_username', 'from_password', 'smtp_host', 'to_email'])
 LOG = logging.getLogger('app.py')
 # For output to terminal
 handler = logging.StreamHandler()
+# For ERROR output to email
+smtphandler = SMTPHandler(mailhost=(email_config["smtp_host"], 587), fromaddr=email_config["from_email"],
+                          toaddrs=email_config["to_email"], subject="LibCal-PP App ERROR",
+                          credentials=(email_config["from_username"], email_config["from_password"]), secure=())
+smtphandler.setLevel("ERROR")
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s:%(message)s')
 handler.setFormatter(formatter)
+smtphandler.setFormatter(formatter)
 LOG.addHandler(handler)
+LOG.addHandler(smtphandler)
 
 class LibCal2PP():
 
@@ -149,6 +161,3 @@ if __name__ == '__main__':
     LOG.setLevel(args.debug)
     app = LibCal2PP()
     app.log_new_bookings()
-
-
-
