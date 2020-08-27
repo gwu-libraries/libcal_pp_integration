@@ -5,11 +5,13 @@ from typing import Dict
 import logging
 from requests.exceptions import HTTPError
 
+
 class PassagePointRequests():
 
     def __init__(self, config_path: str = 'config.yml'):
         '''config_path should be a path to a config file in YAML format. Config should contain the username and password for the LibCal API, as well as the main API endpoint, all nested under a "PassagePoint" key. '''
 
+        self.logger = logging.getLogger('pp_requests.py')
         load_config(config_path=config_path, 
                     top_level_key='PassagePoint', 
                     config_keys=['username', 'password', 'pp_api_root',
@@ -20,7 +22,6 @@ class PassagePointRequests():
                     obj=self)
         self.fetch_token()
         self.req_header = {'token': self.token, 'Content Type': 'application/json'}
-        self.logger = logging.getLogger('pp_requests.py')
 
 
     def fetch_token(self):
@@ -42,6 +43,7 @@ class PassagePointRequests():
             self.logger.error(f'Error fetching PassagePoint authentication token -- {e}')
             raise
 
+
     def _extract_id(self, api_data: Dict):
         '''Extracts the visitor ID(s) from the data returned from the createVisitor call.
         api_data should have a top-level key called "data."'''
@@ -50,6 +52,7 @@ class PassagePointRequests():
             api_data = api_data['data']
         id_num = api_data[0]['id']
         return id_num
+
 
     def create_visitor(self, visitor: dict):
         '''Sends a POST request to create a new visitor using a uniqueId'''

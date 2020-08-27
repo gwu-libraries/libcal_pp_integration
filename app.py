@@ -25,13 +25,11 @@ class LibCal2PP():
         '''
         # Initialize components
         LOG.debug('Initializing components')
-        try:
-            self.libcal = LibCalRequests(config_path)
-            self.alma = AlmaRequests(config_path)
-            self.cache = SQLiteCache()
-            self.pp = PassagePointRequests(config_path)
-        except Exception as e:
-            LOG.error(f'Error on init -- {e}')
+        # Do not catch errors here - if any of these fail, we want the program to exit
+        self.libcal = LibCalRequests(config_path)
+        self.alma = AlmaRequests(config_path)
+        self.cache = SQLiteCache()
+        self.pp = PassagePointRequests(config_path)
 
 
     def log_new_bookings(self):
@@ -79,6 +77,7 @@ class LibCal2PP():
             except Exception as e:
                 LOG.error(f'Error saving pre-registrations -- {e}')
 
+
     def process_users(self, bookings: List[Dict[str, str]]):
         '''Given new appointments from LibCal, check for their presence in the cache and if necessary, retrieve their barcodes from Alma and register them in PassagePoint.'''
         LOG.debug(f'Checking for users in the cache.')
@@ -115,6 +114,7 @@ class LibCal2PP():
             users.update({k: v['visitor_id'] for k, v in registered_users.items()})
         return users
 
+
     def register_new_users(self, new_users: Dict[str, Dict[str, str]]):
         '''new_users should be a dictionary whose keys are Alma Primary IDs and whose values are dictionaries containing additional information from LibCal required to register new users in PassagePoint.'''
         LOG.debug(f'Getting new user info from Alma for {list(new_users.keys())}.')
@@ -140,6 +140,7 @@ class LibCal2PP():
             except Exception as e:
                 self.logger.error(f'Error creating PassagePoint visitor record for user {pid} -- {e}')
                 continue
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

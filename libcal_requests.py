@@ -10,12 +10,12 @@ class LibCalRequests():
     def __init__(self, config_path: str = 'config.yml'):
         '''config_path should be a path to a config file in YAML format. Config should contain the client id and client secret for the LibCal API, as well as the authentication and bookings endpoints, all nested under a "LibCal" key. '''
 
+        self.logger = logging.getLogger('libcal_requests.py')
         load_config(config_path=config_path, 
                     top_level_key='LibCal', 
                     config_keys=['client_id', 'client_secret', 'credentials_endpt', 'bookings_endpt', 'locations', 'primary_id_field'],
                     obj=self)
         self.fetch_token()
-        self.logger = logging.getLogger('libcal_requests.py')
 
 
     def retrieve_bookings_by_location(self):
@@ -29,11 +29,13 @@ class LibCalRequests():
                 self.logger.error(f'Failed to get bookings for {location["name"]} -- {e}')
         return bookings
 
+
     def check_status(self, booking: Dict):
         '''To filter out bookings with particular kinds of statuses.'''
         if 'Cancelled' in booking:
             return False
         return True
+
 
     def get_bookings(self, location: Dict, retry: bool = False):
         '''Fetches the space appointments for today\'s date (default).
@@ -71,6 +73,7 @@ class LibCalRequests():
             self.logger.error(f'Error fetching bookings data. -- {e}')
             raise
 
+
     def prepare_bookings_req(self, location: Dict):
         '''Creates the authentication header and the default parameters for the LibCal bookings calls.
         location argument should be a dictionary with keys "name" and "id." The id field is used to pass the location to the bookings query.'''
@@ -79,6 +82,7 @@ class LibCalRequests():
                 'lid': location['id'],
                 'formAnswers': 1} # Includes additional form fields 
         return header, params
+
 
     def fetch_token(self):
         '''Retrieves a new authentication token, using supplied credentials.'''
@@ -103,7 +107,8 @@ class LibCalRequests():
         except Exception as e:
             self.logger.error('Error fetching LibCal authentication token.')
             raise
-            
+
+
 if __name__ == '__main__':
     libcal = LibCalRequests('config.yml')
     bookings = libcal.retrieve_bookings_by_location()
