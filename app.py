@@ -1,8 +1,8 @@
 import argparse
 import logging
+import sched, time
 from logging.handlers import SMTPHandler
 from typing import Dict, List
-
 from libcal_requests import LibCalRequests
 from alma_requests import AlmaRequests
 from sqlite_cache import SQLiteCache
@@ -27,6 +27,10 @@ handler.setFormatter(formatter)
 smtphandler.setFormatter(formatter)
 LOG.addHandler(handler)
 LOG.addHandler(smtphandler)
+
+# Default is 5 minutes
+# TO DO: Move to config
+DELAY = 300
 
 class LibCal2PP():
 
@@ -55,6 +59,9 @@ class LibCal2PP():
         LOG.debug(f'Bookings retrieved: {len(bookings)}')
         # Filter out appointments already in the database 
         new_bookings = [booking for booking in bookings if not self.cache.appt_lookup(booking['bookId'])]
+        if not new_bookings:
+            LOG.debug('No new bookings.')
+            return
         LOG.debug(f'New bookings: {new_bookings}')
         # Get the user info we need for PassagePoint, registering any new users in the process
         users = self.process_users(new_bookings)
@@ -153,6 +160,16 @@ class LibCal2PP():
                 self.logger.error(f'Error creating PassagePoint visitor record for user {pid} -- {e}')
                 continue
 
+def run_app(app, scheduler):
+    '''Function to schedule and run the app. 
+    app should be an instance of LibCal2PP. This function calls the log_new_bookings method.
+    scheduler should be an instance of sched.scheduler.'''
+    app.log_new_bookings()
+    # Schedule the next run of this function
+    scheduler.enter(DELAY, 1, run_app, argument=(app, scheduler))
+    # Run the scheduling thread
+    scheduler.run()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -160,5 +177,7 @@ if __name__ == '__main__':
     parser.add_argument('--debug', action="store_const", const=logging.DEBUG, default=logging.WARNING)
     args = parser.parse_args()
     LOG.setLevel(args.debug)
+    # Initialize sched object
+    scheduler = sched.scheduler(time.time, time.sleep)
     app = LibCal2PP()
-    app.log_new_bookings()
+    run_app(app, scheduler)
