@@ -11,7 +11,8 @@ class AlmaRequests():
 
     def __init__(self, config_path: str):
         '''config_path should be a path to a config file in YAML format. Config should contain the API key for the Alma Users API as well as the endpoint for looking up a user by Primary ID. '''
-        load_config(config_path=config_path, 
+        self.logger = logging.getLogger('alma_requests.py')
+        load_config(config_path=config_path,
                     top_level_key='Alma', 
                     config_keys=['apikey', 'users_endpt'],
                     obj=self)
@@ -20,7 +21,7 @@ class AlmaRequests():
                         'Accept': 'application/json'}
         # Initialize throttler for Alma's rate limit
         self.throttler = Throttler(rate_limit=25)
-        self.logger = logging.getLogger('alma_requests.py')
+
 
     def _extract_info(self, users: List):
         '''Given a list of user objects, extract a mapping from primary ID to barcode.'''
@@ -36,12 +37,14 @@ class AlmaRequests():
                     break # Once we've found the barcode, move to the next user
         return mapping
 
+
     def _extract_user_group(self, user: Dict):
         '''Given a user object, extract the user group.'''
         user_group = user.get('user_group')
         if user_group:
             return user_group.get('desc')
         return user_group
+
 
     def main(self, user_ids: List[str]):
         '''Function to run async loop. Argument should be a list of user IDs to retrieve in Alma.'''
@@ -60,6 +63,7 @@ class AlmaRequests():
             queries = [self._fetch_user(user_id, client) for user_id in user_ids if user_id]
             results =  await asyncio.gather(*queries, return_exceptions=True)
         return results
+
 
     async def _fetch_user(self, user_id: str, client):
         '''Given a user ID, fetch the user\'s record from the Alma API.
