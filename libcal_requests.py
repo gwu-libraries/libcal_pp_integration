@@ -1,6 +1,6 @@
 import requests
 from utils import load_config
-from typing import Dict
+from typing import Dict, List
 from requests.exceptions import HTTPError
 import logging
 
@@ -36,6 +36,19 @@ class LibCalRequests():
             return False
         return True
 
+    def dedup_bookings(self, bookings: List):
+        '''Identified duplicate bookIds, which can occur when appointments are made using the LibCal admin module for the same user for the same time for different seats.
+        For the purposes of this integration, we count those as a single booking.'''
+        uniq_bookings = {b['bookId'] for b in bookings}
+        # Check for non-unique bookId's in the list
+        if len(uniq_bookings) < len(bookings):
+            deduped = []
+            for booking in bookings:
+                if booking['bookId'] in uniq_bookings: # If this is in the unique set, store it
+                    deduped.append(booking)
+                    uniq_bookings.remove(booking['bookId']) # Remove this Id from the set 
+            return deduped
+        return bookings
 
     def get_bookings(self, location: Dict, retry: bool = False):
         '''Fetches the space appointments for today\'s date (default).
@@ -59,6 +72,7 @@ class LibCalRequests():
                     continue
                 booking['primary_id'] = booking.get(self.primary_id_field)
                 bookings.append(booking)
+            bookings = self.dedup_bookings(bookings)
             return bookings
         except HTTPError:
             # Test for expired token
