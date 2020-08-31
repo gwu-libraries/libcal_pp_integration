@@ -30,7 +30,7 @@ LOG.addHandler(smtphandler)
 
 # Default is 5 minutes
 # TO DO: Move to config
-DELAY = 300
+DELAY = 30
 
 class LibCal2PP():
 
@@ -161,14 +161,12 @@ class LibCal2PP():
                 continue
 
 def run_app(app, scheduler):
-    '''Function to schedule and run the app. 
+    '''Function to schedule the app. 
     app should be an instance of LibCal2PP. This function calls the log_new_bookings method.
     scheduler should be an instance of sched.scheduler.'''
     app.log_new_bookings()
     # Schedule the next run of this function
     scheduler.enter(DELAY, 1, run_app, argument=(app, scheduler))
-    # Run the scheduling thread
-    scheduler.run()
 
 
 if __name__ == '__main__':
@@ -181,3 +179,6 @@ if __name__ == '__main__':
     scheduler = sched.scheduler(time.time, time.sleep)
     app = LibCal2PP()
     run_app(app, scheduler)
+    # Run the scheduling thread
+    scheduler.run()
+
