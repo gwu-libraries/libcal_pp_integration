@@ -11,7 +11,7 @@ class AlmaRequests():
 
     def __init__(self, config_path: str):
         '''config_path should be a path to a config file in YAML format. Config should contain the API key for the Alma Users API as well as the endpoint for looking up a user by Primary ID. '''
-        self.logger = logging.getLogger('alma_requests.py')
+        self.logger = logging.getLogger('lcpp.alma_requests')
         load_config(config_path=config_path,
                     top_level_key='Alma', 
                     config_keys=['apikey', 'users_endpt'],
