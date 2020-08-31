@@ -30,7 +30,7 @@ LOG.addHandler(smtphandler)
 
 # Default is 5 minutes
 # TO DO: Move to config
-DELAY = 30
+DELAY = 300
 
 class LibCal2PP():
 
