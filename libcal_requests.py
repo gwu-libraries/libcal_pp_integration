@@ -32,9 +32,9 @@ class LibCalRequests():
 
     def check_status(self, booking: Dict):
         '''To filter out bookings with particular kinds of statuses.'''
-        if 'Cancelled' in booking:
-            return False
-        return True
+        if 'Mediation Approved' in booking:
+            return True
+        return False
 
     def dedup_bookings(self, bookings: List):
         '''Identified duplicate bookIds, which can occur when appointments are made using the LibCal admin module for the same user for the same time for different seats.
