@@ -1,5 +1,6 @@
 import argparse
 from alma_requests import AlmaRequests
+from utils import load_config
 
 
 if __name__ == '__main__':
@@ -8,7 +9,7 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser(description='Process some GWIDs.')
 	parser.add_argument('users', nargs='+')
 	user_ids = parser.parse_args().users
-	ar = AlmaRequests('config.yml')
+	ar = AlmaRequests(load_config('config.yml'))
 	results = ar.main(user_ids)
 	print(f'Results: {results}')
 

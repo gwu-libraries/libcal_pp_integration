@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime
-from utils import load_config
+from utils import check_config
 from typing import Dict
 import logging
 from requests.exceptions import HTTPError
@@ -8,11 +8,11 @@ from requests.exceptions import HTTPError
 
 class PassagePointRequests():
 
-    def __init__(self, config_path: str = 'config.yml'):
-        '''config_path should be a path to a config file in YAML format. Config should contain the username and password for the LibCal API, as well as the main API endpoint, all nested under a "PassagePoint" key. '''
+    def __init__(self, config: Dict):
+        '''config should contain the username and password for the LibCal API, as well as the main API endpoint, all nested under a "PassagePoint" key. '''
 
         self.logger = logging.getLogger('lcpp.pp_requests')
-        load_config(config_path=config_path, 
+        check_config(config=config, 
                     top_level_key='PassagePoint', 
                     config_keys=['username', 'password', 'pp_api_root',
                                  'login_endpt', 'create_visitor_endpt',
@@ -40,7 +40,7 @@ class PassagePointRequests():
             self.token = token['token']
             return self
         except Exception as e:
-            self.logger.error(f'Error fetching PassagePoint authentication token -- {e}')
+            self.logger.exception(f'Error fetching PassagePoint authentication token -- {e}')
             raise
 
 
@@ -81,7 +81,7 @@ class PassagePointRequests():
                 self.logger.error(f'Error response: {resp.text}')
                 raise
         except Exception as e:
-            self.logger.error(f'Error creating visitor in PassagePoint for barcode {visitor["barcode"]} -- {e}')
+            self.logger.exception(f'Error creating visitor in PassagePoint for barcode {visitor["barcode"]} -- {e}')
             raise
 
 
@@ -96,7 +96,7 @@ class PassagePointRequests():
             visitor_data = resp.json()
             return self._extract_id(visitor_data)
         except Exception as e:
-            self.logger.error(f'Error getting visitor from PassagePoint with barcode {barcode} -- {e}')
+            self.logger.exception(f'Error getting visitor from PassagePoint with barcode {barcode} -- {e}')
             raise
 
 
@@ -124,7 +124,7 @@ class PassagePointRequests():
             self.logger.error(f'Response body: {resp.text}')
             raise     
         except Exception as e:
-            self.logger.error(f'Error creating pre-registration for booking {booking} -- {e}')
+            self.logger.exception(f'Error creating pre-registration for booking {booking} -- {e}')
             raise
 
 
@@ -137,7 +137,7 @@ class PassagePointRequests():
             destinations = resp.json()
             return destinations
         except Exception as e:
-            self.logger.error(f'Error getting PassagePoint destinations -- {e}')
+            self.logger.exception(f'Error getting PassagePoint destinations -- {e}')
             raise
 
 

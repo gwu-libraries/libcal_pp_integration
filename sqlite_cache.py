@@ -1,17 +1,19 @@
 import sqlite3
 from sqlite3 import OperationalError, Row
 from typing import Dict, List
+import logging
 
 class SQLiteCache():
 
     def __init__(self, db_name: str = 'cache.db'):
         '''Initializes a SQLite database (unless it already exists) with the supplied name (if given).'''
+        self.logger = logging.getLogger('lcpp.sqlite_cache')
         try:
             self.conn = sqlite3.connect(db_name)
             self.conn.row_factory = Row # Facilitates lookup of query results by key
             self.cursor = self.conn.cursor()
         except Exception as e:
-            print('Error connecting to database.')
+            self.logger.exception(f'Error connecting to database.')
             raise
 
         self._create_tables()
@@ -31,7 +33,7 @@ class SQLiteCache():
         except OperationalError as e:
             # Catch error if table already exists; no need to recreate
             if 'already exists' in e.args[0]:
-                print('Tables already exist. Skipping table creation.')
+                self.logger.debug('Tables already exist. Skipping table creation.')
                 return
         except Exception as e:
             raise
@@ -50,7 +52,7 @@ class SQLiteCache():
                 return dict(row)
             return None
         except Exception as e:
-            print('Error querying users table.')
+            self.logger.exception('Error querying users table.')
             raise
 
     def appt_lookup(self, appt_id: str):
@@ -67,7 +69,7 @@ class SQLiteCache():
                     return dict(row)
                 return None
         except Exception as e:
-            print('Error querying appointments table.')
+            self.logger.exception('Error querying appointments table.')
             raise
 
     def add_users(self, user_data: List[Dict[str, str]]):
@@ -81,7 +83,7 @@ class SQLiteCache():
                                     VALUES (:primary_id, :barcode, :visitor_id)
                                     ''', user_data)
             except Exception as e:
-                print(f'Error loading users {user_data}')
+                self.logger.exception(f'Error loading users {user_data}')
                 raise
 
     def add_appt(self, appt_data: List[Dict[str, str]]):
@@ -94,7 +96,7 @@ class SQLiteCache():
                                         VALUES (:appt_id, :prereg_id)
                                     ''', appt_data)
             except Exception as e:
-                print(f'Error loading appointments {appt_data}.')
+                self.logger.exception(f'Error loading appointments {appt_data}.')
                 raise 
 
     def delete_appts(self):

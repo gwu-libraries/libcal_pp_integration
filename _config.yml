@@ -1,3 +1,5 @@
+LCPP:
+  interval: 300 # In seconds
 LibCal:
   client_id: 
   client_secret: 

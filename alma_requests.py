@@ -1,7 +1,7 @@
 import asyncio
 import aiohttp
 from aiohttp import ClientResponseError 
-from utils import load_config, partition
+from utils import check_config, partition
 from asyncio_throttle import Throttler
 from typing import List, Dict
 import logging
@@ -9,10 +9,10 @@ import logging
 
 class AlmaRequests():
 
-    def __init__(self, config_path: str):
-        '''config_path should be a path to a config file in YAML format. Config should contain the API key for the Alma Users API as well as the endpoint for looking up a user by Primary ID. '''
+    def __init__(self, config: Dict):
+        '''config should be a Python dictionary containing the API key for the Alma Users API as well as the endpoint for looking up a user by Primary ID. '''
         self.logger = logging.getLogger('lcpp.alma_requests')
-        load_config(config_path=config_path,
+        check_config(config=config,
                     top_level_key='Alma', 
                     config_keys=['apikey', 'users_endpt'],
                     obj=self)
@@ -82,7 +82,7 @@ class AlmaRequests():
             return {'Error Code': e.status, 'User ID': user_id, 
                     'Error Msg': e.message}
         except Exception as e:
-            self.logger.error(f'Query to Alma API failed on user {user_id}')
+            self.logger.exception(f'Query to Alma API failed on user {user_id}')
             return {'Error': e, 'User ID': user_id}
 
 

@@ -1,5 +1,5 @@
 import requests
-from utils import load_config
+from utils import check_config
 from typing import Dict, List
 from requests.exceptions import HTTPError
 import logging
@@ -7,11 +7,11 @@ import logging
 
 class LibCalRequests():
 
-    def __init__(self, config_path: str = 'config.yml'):
-        '''config_path should be a path to a config file in YAML format. Config should contain the client id and client secret for the LibCal API, as well as the authentication and bookings endpoints, all nested under a "LibCal" key. '''
+    def __init__(self, config: Dict):
+        '''config should contain the client id and client secret for the LibCal API, as well as the authentication and bookings endpoints, all nested under a "LibCal" key. '''
 
         self.logger = logging.getLogger('lcpp.libcal_requests')
-        load_config(config_path=config_path, 
+        check_config(config=config,
                     top_level_key='LibCal', 
                     config_keys=['client_id', 'client_secret', 'credentials_endpt', 'bookings_endpt', 'locations', 'primary_id_field'],
                     obj=self)
@@ -26,7 +26,7 @@ class LibCalRequests():
                 booking = self.get_bookings(location)
                 bookings.extend(booking)
             except Exception as e:
-                self.logger.error(f'Failed to get bookings for {location["name"]} -- {e}')
+                self.logger.exception(f'Failed to get bookings for {location["name"]} -- {e}')
         return bookings
 
 
@@ -84,7 +84,6 @@ class LibCalRequests():
             self.logger.error(f'Error response: {resp.text}')
             raise
         except Exception as e:
-            self.logger.error(f'Error fetching bookings data. -- {e}')
             raise
 
 
@@ -119,7 +118,7 @@ class LibCalRequests():
             self.logger.error(f'Error body: {resp.text}')
             raise
         except Exception as e:
-            self.logger.error('Error fetching LibCal authentication token.')
+            self.logger.exception('Error fetching LibCal authentication token.')
             raise
 
 
