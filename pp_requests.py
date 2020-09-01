@@ -11,7 +11,7 @@ class PassagePointRequests():
     def __init__(self, config_path: str = 'config.yml'):
         '''config_path should be a path to a config file in YAML format. Config should contain the username and password for the LibCal API, as well as the main API endpoint, all nested under a "PassagePoint" key. '''
 
-        self.logger = logging.getLogger('pp_requests.py')
+        self.logger = logging.getLogger('lcpp.pp_requests')
         load_config(config_path=config_path, 
                     top_level_key='PassagePoint', 
                     config_keys=['username', 'password', 'pp_api_root',

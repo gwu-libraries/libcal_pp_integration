@@ -14,7 +14,7 @@ from utils import load_config
 email_config = load_config(config_path='./config.yml', 
                            top_level_key='Emails', 
                            config_keys=['from_email', 'from_username', 'from_password', 'smtp_host', 'to_email'])
-LOG = logging.getLogger('app.py')
+LOG = logging.getLogger('lcpp')
 # For output to terminal
 handler = logging.StreamHandler()
 # For ERROR output to email
