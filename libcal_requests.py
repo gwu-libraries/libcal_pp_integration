@@ -32,7 +32,7 @@ class LibCalRequests():
 
     def check_status(self, booking: Dict):
         '''To filter out bookings with particular kinds of statuses.'''
-        if 'Mediation Approved' in booking:
+        if 'Mediated Approved' in booking:
             return True
         return False
 
