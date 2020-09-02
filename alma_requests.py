@@ -53,7 +53,9 @@ class AlmaRequests():
         errors, results = partition(lambda x: 'record_type' in x, results)
         # Extract barcodes and user groups as mapping to user IDs
         user_data = self._extract_info(results)
-        self.logger.error(f'Errors: {list(errors)}') # TO DO: log these somewhere
+        errors = list(errors)
+        if errors:
+            self.logger.error(f'Errors: {errors}') # TO DO: log these somewhere
         return user_data
 
 
