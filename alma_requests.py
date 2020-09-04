@@ -55,7 +55,7 @@ class AlmaRequests():
         user_data = self._extract_info(results)
         errors = list(errors)
         if errors:
-            self.logger.error(f'Errors: {errors}') # TO DO: log these somewhere
+            pass#self.logger.debug(f'Alma API failed lookups: {errors}') # TO DO: log these somewhere
         return user_data
 
 
@@ -75,12 +75,16 @@ class AlmaRequests():
             async with self.throttler: # Throttler is set to enforce Alma's rate limits
                 async with client.get(url, 
                                         headers=self.headers,
-                                        raise_for_status=True) as session: # client should be a reference to a shared aiohttp.ClientSession
+                                        raise_for_status=False) as session: # client should be a reference to a shared aiohttp.ClientSession
+                    if session.status != 200:
+                        body = await session.json()
+                        self.logger.debug(body)
+                        session.raise_for_status()
                     result = await session.json()
                     return result
         # Return exceptions to the asyncio.gather call
         except ClientResponseError as e:
-            self.logger.error(f'Query to Alma API failed on user {user_id}')
+            #self.logger.error(f'Query to Alma API failed on user {user_id}')
             return {'Error Code': e.status, 'User ID': user_id, 
                     'Error Msg': e.message}
         except Exception as e:
