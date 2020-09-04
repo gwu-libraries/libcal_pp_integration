@@ -50,7 +50,7 @@ class AlmaRequests():
         '''Function to run async loop. Argument should be a list of user IDs to retrieve in Alma.'''
         results = asyncio.run(self._retrieve_user_records(user_ids))
         # Valid results have the record_type key
-        errors, results = partition(lambda x: 'record_type' in x, results)
+        errors, results = partition(lambda x: x and 'record_type' in x, results)
         # Extract barcodes and user groups as mapping to user IDs
         user_data = self._extract_info(results)
         errors = list(errors)
@@ -66,6 +66,11 @@ class AlmaRequests():
             results =  await asyncio.gather(*queries, return_exceptions=True)
         return results
 
+    def _check_error_status(self, error_msg: Dict):
+        '''Checks an Alma API error message for a "User not found" error.'''
+        for error in error_msg['errorList']['error']:
+            if error['errorCode'] == '401861':
+                return True # Found an instance of user not found
 
     async def _fetch_user(self, user_id: str, client):
         '''Given a user ID, fetch the user\'s record from the Alma API.
@@ -77,14 +82,18 @@ class AlmaRequests():
                                         headers=self.headers,
                                         raise_for_status=False) as session: # client should be a reference to a shared aiohttp.ClientSession
                     if session.status != 200:
-                        body = await session.json()
-                        self.logger.debug(body)
-                        session.raise_for_status()
+                        if session.content_type == 'application/json':
+                            body = await session.json()
+                            if self._check_error_status(body): # Test for User not found error
+                                self.logger.debug(body)
+                                return None
+                        else:
+                            session.raise_for_status()
                     result = await session.json()
                     return result
         # Return exceptions to the asyncio.gather call
         except ClientResponseError as e:
-            #self.logger.error(f'Query to Alma API failed on user {user_id}')
+            self.logger.exception(f'Query to Alma API failed on user {user_id}')
             return {'Error Code': e.status, 'User ID': user_id, 
                     'Error Msg': e.message}
         except Exception as e:
