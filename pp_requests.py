@@ -1,6 +1,6 @@
 import requests
 from datetime import datetime
-from utils import check_config
+from utils import check_config, load_config
 from typing import Dict
 import logging
 from requests.exceptions import HTTPError
@@ -20,9 +20,7 @@ class PassagePointRequests():
                                  'get_destinations_endpt', 'user_mapping',
                                  'location_mapping'],
                     obj=self)
-        self.fetch_token()
-        self.req_header = {'token': self.token, 'Content Type': 'application/json'}
-
+        self.make_header()
 
     def fetch_token(self):
         '''Retrieves a new authentication token, using supplied credentials.'''
@@ -43,6 +41,10 @@ class PassagePointRequests():
             self.logger.exception(f'Error fetching PassagePoint authentication token -- {e}')
             raise
 
+    def make_header(self):
+        '''Create the HTTP headers, using the PP token.'''
+        self.fetch_token()
+        self.req_header = {'token': self.token, 'Content Type': 'application/json'}
 
     def _extract_id(self, api_data: Dict):
         '''Extracts the visitor ID(s) from the data returned from the createVisitor call.
@@ -54,9 +56,25 @@ class PassagePointRequests():
         return id_num
 
 
+    def retry(self, func, *args, **kwargs):
+        '''Helper function to refresh the token before re-trying the given function.'''
+        self.make_header()
+        return func(*args, **kwargs)
+
+
+    def error_handler(self, resp, error, func, *args, **kwargs):
+        '''Error handler for HTTP errors. Func should be the function to retry, in case of a 401 error, followed by its arguments and keyword arguments. '''
+        if resp.status_code == 401: # Retry if 401
+            self.logger.debug('Token expired. Getting new PassagePoint token.')
+            self.retry(func, *args, **kwargs)
+        else: # Otherwise, log the response and propagate the error
+            self.logger.error(f'Error in calling PassagePoint API: {resp.reason}')
+            self.logger.error(f'Error response: {resp.text}')
+            raise error
+
+
     def create_visitor(self, visitor: dict):
         '''Sends a POST request to create a new visitor using a uniqueId'''
-
         # visitor['user_group'] should correspond to an Alma user group. Default is "Visitor"
         params = {'category': self.user_mapping.get(visitor['user_group'], 'Visitor'),
                   'firstName': visitor['firstName'],
@@ -71,15 +89,13 @@ class PassagePointRequests():
             if 'error' in visitor_data:
                 raise Exception(visitor_data)
             return self._extract_id(visitor_data)
-        except HTTPError:
+        except HTTPError as e:
             if 'ALREADY_EXIST_UNIQUE_ID' in resp.text:
                 # If the request fails because the visitor has already been created, try to get the Visitor ID
                 self.logger.debug(f'Visitor {visitor["barcode"]} already exists in PassagePoint; getting Visitor ID.')
                 return self.get_visitor_bybarcode(visitor['barcode'])
             else:
-                self.logger.error(f'Error in calling createVisitor API: {resp.reason}')
-                self.logger.error(f'Error response: {resp.text}')
-                raise
+                self.error_handler(resp, e, self.create_visitor, visitor)
         except Exception as e:
             self.logger.exception(f'Error creating visitor in PassagePoint for barcode {visitor["barcode"]} -- {e}')
             raise
@@ -95,6 +111,8 @@ class PassagePointRequests():
             resp.raise_for_status()
             visitor_data = resp.json()
             return self._extract_id(visitor_data)
+        except HTTPError as e:
+                self.error_handler(resp, e, self.get_visitor_bybarcode, barcode)
         except Exception as e:
             self.logger.exception(f'Error getting visitor from PassagePoint with barcode {barcode} -- {e}')
             raise
@@ -119,10 +137,8 @@ class PassagePointRequests():
             if 'error' in prereg_data:
                 raise Exception(prereg_data)
             return self._extract_id(prereg_data)
-        except HTTPError:
-            self.logger.error(f'Error in calling createPreReg API: {resp.reason}')  
-            self.logger.error(f'Response body: {resp.text}')
-            raise     
+        except HTTPError as e:
+            self.error_handler(resp, e, self.create_prereg, booking, visitor)
         except Exception as e:
             self.logger.exception(f'Error creating pre-registration for booking {booking} -- {e}')
             raise
@@ -142,12 +158,13 @@ class PassagePointRequests():
 
 
 if __name__ == '__main__':
-    passagept = PassagePointRequests()
+    config = load_config('config.yml')
+    passagept = PassagePointRequests(config)
     print(passagept.token)
     print(passagept.req_header)
  #   visitor_data = passagept.create_visitor({'firstName': 'Test',
  #                                            'lastName': 'Patron',
  #                                            'barcode': '012301230123012301'})
  #   print(visitor_data)
-    prereg = passagept.create_prereg({"startTime": "2020-08-22T20:05:00-04:00", "endTime": "2020-08-22T22:05:00-04:00"}, '137505764541138')
+    prereg = passagept.create_prereg({"startTime": "2020-08-22T20:05:00-04:00", "endTime": "2020-08-22T22:05:00-04:00", "destination": 8827}, '137505764541138')
     print(prereg)
