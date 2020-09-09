@@ -12,7 +12,8 @@ LibCal:
   bookings_endpt: 'https://booking.library.gwu.edu/1.1/space/bookings'
   primary_id_field: q12505
 Alma:
-  apikey: 
+  apikeys:
+    - XXXXXXXXXXXXXXXXXXXXXXXXXXXX 
   users_endpt: 'https://api-na.hosted.exlibrisgroup.com/almaws/v1/users'
 PassagePoint:
   username: 

@@ -14,11 +14,8 @@ class AlmaRequests():
         self.logger = logging.getLogger('lcpp.alma_requests')
         check_config(config=config,
                     top_level_key='Alma', 
-                    config_keys=['apikey', 'users_endpt'],
+                    config_keys=['apikeys', 'users_endpt'],
                     obj=self)
-        # Create request header
-        self.headers = {'Authorization': f"apikey {self.apikey}",
-                        'Accept': 'application/json'}
         # Initialize throttler for Alma's rate limit
         self.throttler = Throttler(rate_limit=25)
 
@@ -48,14 +45,24 @@ class AlmaRequests():
 
     def main(self, user_ids: List[str]):
         '''Function to run async loop. Argument should be a list of user IDs to retrieve in Alma.'''
-        results = asyncio.run(self._retrieve_user_records(user_ids))
-        # Valid results have the record_type key
-        errors, results = partition(lambda x: x and 'record_type' in x, results)
-        # Extract barcodes and user groups as mapping to user IDs
-        user_data = self._extract_info(results)
-        errors = list(errors)
-        if errors:
-            pass#self.logger.debug(f'Alma API failed lookups: {errors}') # TO DO: log these somewhere
+        user_data = []
+        # Loop through available Alma API keys in order. Allows querying of multiple IZ's.
+        for apikey in self.apikeys:
+            # Create request header
+            self.headers = {'Authorization': f"apikey {apikey}",
+                        'Accept': 'application/json'}
+            results = asyncio.run(self._retrieve_user_records(user_ids))
+            # Valid results have the record_type key
+            errors, results = partition(lambda x: x and 'record_type' in x, results)
+            # Extract barcodes and user groups as mapping to user IDs
+            user_data.extend(self._extract_info(results))
+            # Get the remaining user ID's to query
+            user_ids = [e['User ID'] for e in errors if e['Error'] == 'User Not Found']
+            if not user_ids:
+                break
+        # Log user ID's that could not be found
+        if user_ids:
+            self.logger.error(f"Users could not be found in any IZ: {user_ids}")
         return user_data
 
 
@@ -85,8 +92,8 @@ class AlmaRequests():
                         if session.content_type == 'application/json':
                             body = await session.json()
                             if self._check_error_status(body): # Test for User not found error
-                                self.logger.debug(body)
-                                return None
+                                # Flag this error to query the user in another IZ, if possible
+                                return {'Error': 'User Not Found', 'User ID': user_id}
                         else:
                             session.raise_for_status()
                     result = await session.json()
@@ -94,7 +101,7 @@ class AlmaRequests():
         # Return exceptions to the asyncio.gather call
         except ClientResponseError as e:
             self.logger.exception(f'Query to Alma API failed on user {user_id}')
-            return {'Error Code': e.status, 'User ID': user_id, 
+            return {'Error': e.status, 'User ID': user_id, 
                     'Error Msg': e.message}
         except Exception as e:
             self.logger.exception(f'Query to Alma API failed on user {user_id}')
