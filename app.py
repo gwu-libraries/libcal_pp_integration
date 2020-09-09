@@ -116,8 +116,8 @@ class LibCal2PP():
                 except Exception as e:
                     self.logger.error(f'Error processing user {primary_id} -- {e}')
                     continue
-            # If the user isn't in the cache, need to get their info from Alma
-                if not user:
+            # If the user isn't in the cache, or if the records lacks a visitor_id, need to get their info from Alma
+                if not user or not user.get('visitor_id'):
                     new_users[primary_id] = {'firstName': b['firstName'],
                                              'lastName': b['lastName']}
             # Otherwise, record their PassagePoint Id
