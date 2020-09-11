@@ -45,7 +45,7 @@ class AlmaRequests():
 
     def main(self, user_ids: List[str]):
         '''Function to run async loop. Argument should be a list of user IDs to retrieve in Alma.'''
-        user_data = []
+        user_data = {}
         # Loop through available Alma API keys in order. Allows querying of multiple IZ's.
         for apikey in self.apikeys:
             # Create request header
@@ -55,7 +55,7 @@ class AlmaRequests():
             # Valid results have the record_type key
             errors, results = partition(lambda x: x and 'record_type' in x, results)
             # Extract barcodes and user groups as mapping to user IDs
-            user_data.append(self._extract_info(results))
+            user_data.update(self._extract_info(results))
             # Get the remaining user ID's to query
             user_ids = [e['User ID'] for e in errors if e['Error'] == 'User Not Found']
             if not user_ids:
