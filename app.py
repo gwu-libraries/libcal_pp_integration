@@ -119,7 +119,9 @@ class LibCal2PP():
             # If the user isn't in the cache, or if the records lacks a visitor_id, need to get their info from Alma
                 if not user or not user.get('visitor_id'):
                     new_users[primary_id] = {'firstName': b['firstName'],
-                                             'lastName': b['lastName']}
+                                             'lastName': b['lastName'],
+                                             'email': b['email'],
+                                             'primary_id': primary_id}
             # Otherwise, record their PassagePoint Id
                 else:
                     users[primary_id] = user['visitor_id']  

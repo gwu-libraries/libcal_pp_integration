@@ -79,6 +79,8 @@ class PassagePointRequests():
         params = {'category': self.user_mapping.get(visitor['user_group'], 'Visitor'),
                   'firstName': visitor['firstName'],
                   'lastName': visitor['lastName'],
+                  'email': visitor['email'],
+                  'mobilePhoneNo': visitor['primary_id'],
                   'uniqueId': str(visitor['barcode'])}
         try:
             resp = requests.post(self.pp_api_root + self.create_visitor_endpt,
@@ -123,15 +125,16 @@ class PassagePointRequests():
         Requires a booking dict with a visitorId, startTime and endTime
         '''
         try:
+            prereg = {}
             format_str = '%Y-%m-%dT%H:%M:%S%z'
-            booking["startTime"] = str(int(datetime.strptime(booking['startTime'], format_str).timestamp()))
-            booking["endTime"] = str(int(datetime.strptime(booking['endTime'], format_str).timestamp()))
-            booking["visitorId"] = str(visitor)
+            prereg["startTime"] = str(int(datetime.strptime(booking['startTime'], format_str).timestamp()))
+            prereg["endTime"] = str(int(datetime.strptime(booking['endTime'], format_str).timestamp()))
+            prereg["visitorId"] = str(visitor)
             # Map the LibCal location ID to its destination name in PassagePoint
-            booking["destination"] = self.location_mapping.get(booking['destination'])  # needs to exist in PP
+            prereg["destination"] = self.location_mapping.get(booking['destination'])  # needs to exist in PP
             resp = requests.post(self.pp_api_root + self.create_prereg_endpt,
                                  headers=self.req_header,
-                                 json=booking)
+                                 json=prereg)
             resp.raise_for_status()
             prereg_data = resp.json()
             if 'error' in prereg_data:
