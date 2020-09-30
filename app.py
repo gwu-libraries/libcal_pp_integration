@@ -153,6 +153,9 @@ class LibCal2PP():
             # Update the user info with the barcode and user_group from Alma
             new_user = new_users[pid]
             new_user.update(user) 
+            if not user.get('barcode'):
+                self.logger.debug(f'User {pid} missing barcode in Alma. Skipping preregistration.')
+                continue
             try:
                 self.logger.debug(f'Creating PassagePoint visitor record: {pid}.')
                 # Call to Passage Point API here

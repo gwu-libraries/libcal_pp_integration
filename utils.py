@@ -24,7 +24,7 @@ def check_config(config: Dict, top_level_key: str, config_keys: List[str], obj=N
         config_keys = set(config_keys)
         # Test for the presence of the required API settings
         if not config_keys <= set(config[top_level_key].keys()):
-            raise Exception(f'One or more LibCal API settings missing from {config_path}')
+            raise Exception(f'One or more settings missing from {config_path}')
         # For convenience, convert to class attributes
         if obj:
             for c in config_keys:
