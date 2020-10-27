@@ -44,7 +44,7 @@ class PassagePointRequests():
     def make_header(self):
         '''Create the HTTP headers, using the PP token.'''
         self.fetch_token()
-        self.req_header = {'token': self.token, 'Content Type': 'application/json'}
+        self.req_header = {'token': self.token, 'Content-Type': 'application/json'}
 
     def _extract_id(self, api_data: Dict):
         '''Extracts the visitor ID(s) from the data returned from the createVisitor call.
