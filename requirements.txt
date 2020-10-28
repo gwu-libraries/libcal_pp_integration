@@ -3,3 +3,4 @@ pyaml == 20.4.0
 aiohttp == 3.6.2
 asyncio-throttle == 1.0.1
 pytest
+responses
