@@ -3,7 +3,7 @@ from utils import check_config
 from typing import Dict, List
 from requests.exceptions import HTTPError
 import logging
-
+import re
 
 class LibCalRequests():
 
@@ -15,6 +15,8 @@ class LibCalRequests():
                     top_level_key='LibCal', 
                     config_keys=['client_id', 'client_secret', 'credentials_endpt', 'bookings_endpt', 'locations', 'primary_id_field'],
                     obj=self)
+        # Pattern to test for the presence of a valid primary identifier
+        self.id_match = re.compile(r'[Gg]\d{8}')
         self.fetch_token()
 
 
@@ -71,6 +73,9 @@ class LibCalRequests():
                 if not self.check_status(booking['status']):
                     continue
                 booking['primary_id'] = booking.get(self.primary_id_field)
+                # For GWID, convert to uppercase (in case initial letter is lowercase)
+                if self.id_match.match(booking['primary_id']):
+                    booking['primary_id'] = booking['primary_id'].upper()
                 bookings.append(booking)
             bookings = self.dedup_bookings(bookings)
             return bookings
@@ -123,6 +128,8 @@ class LibCalRequests():
 
 
 if __name__ == '__main__':
-    libcal = LibCalRequests('config.yml')
+    from utils import load_config
+    config = load_config('config.yml')
+    libcal = LibCalRequests(config)
     bookings = libcal.retrieve_bookings_by_location()
     print(bookings)
