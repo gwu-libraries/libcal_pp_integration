@@ -74,8 +74,9 @@ class LibCalRequests():
                     continue
                 booking['primary_id'] = booking.get(self.primary_id_field)
                 # For GWID, convert to uppercase (in case initial letter is lowercase)
+                # Remove any leading or trailing spaces
                 if self.id_match.match(booking['primary_id']):
-                    booking['primary_id'] = booking['primary_id'].upper()
+                    booking['primary_id'] = booking['primary_id'].upper().strip()
                 bookings.append(booking)
             bookings = self.dedup_bookings(bookings)
             return bookings
