@@ -1,6 +1,7 @@
 import argparse
 import logging
 import sched, time
+from datetime import datetime
 from logging.handlers import SMTPHandler
 from typing import Dict, List
 from libcal_requests import LibCalRequests
@@ -50,6 +51,8 @@ class LibCal2PP():
         self.pp = PassagePointRequests(self.config)
         # Should contain the value for the interval for scheduled execution
         self.interval = self.config['LCPP']['interval']
+        # Cache for storing invalid user ID's (wiped at midnight daily)
+        self.error_cache = []
 
     def log_new_bookings(self):
         '''Retrieve bookings from LibCal and create new pre-registrations in PassagePoint.'''
@@ -114,7 +117,7 @@ class LibCal2PP():
                 try:
                     user = self.cache.user_lookup(primary_id)
                 except Exception as e:
-                    self.logger.error(f'Error processing user {primary_id} -- {e}')
+                    self.logger.exception(f'Error processing user {primary_id} -- {e}')
                     continue
             # If the user isn't in the cache, or if the records lacks a visitor_id, need to get their info from Alma
                 if not user or not user.get('visitor_id'):
@@ -126,12 +129,16 @@ class LibCal2PP():
                 else:
                     users[primary_id] = user['visitor_id']  
 
+        # Skip any already in the error cache
+        new_users = {primary_id: booking for primary_id, booking in new_users.items() 
+                                        if primary_id not in self.error_cache}
         if new_users:
             # Register the new users and get back their PassagePoint ID's
             registered_users = {user['primary_id']: user for user in self.register_new_users(new_users) if user}
             try:
-                self.logger.debug(f'Adding newly registered users to the cache.')
-                self.cache.add_users(registered_users.values())
+                if registered_users:
+                    self.logger.debug(f'Adding newly registered users to the cache.')
+                    self.cache.add_users(registered_users.values())
             except Exception as e:
                 self.logger.exception(f'Error saving new users -- {e}')
             # Update the list of users for registering appointments in Passage Point
@@ -144,17 +151,21 @@ class LibCal2PP():
         self.logger.debug(f'Getting new user info from Alma for {list(new_users.keys())}.')
         # AlmaRequest.main returns a dict mapping primary ID's to barcodes
         try:
-            pid_to_users = self.alma.main(new_users.keys())
+            pid_to_users, invalid_users = self.alma.main(new_users.keys())
         except Exception as e:
             self.logger.exception(f'Error fetching user data for new users -- {e}')
             return None
+        if invalid_users:
+            self.logger.error(f'Primary ID\'s not found in any IZ: {invalid_users}')
+            self.error_cache.extend(invalid_users)
         # Register new PassagePoint users -- function should return for each user, their Visitor Id
         for pid, user in pid_to_users.items():
             # Update the user info with the barcode and user_group from Alma
             new_user = new_users[pid]
             new_user.update(user) 
             if not user.get('barcode'):
-                self.logger.debug(f'User {pid} missing barcode in Alma. Skipping preregistration.')
+                self.logger.error(f'User {pid} missing barcode in Alma. Skipping preregistration.')
+                self.error_cache.append(pid)
                 continue
             try:
                 self.logger.debug(f'Creating PassagePoint visitor record: {pid}.')
@@ -168,6 +179,14 @@ class LibCal2PP():
                 self.logger.exception(f'Error creating PassagePoint visitor record for user {pid} -- {e}')
                 continue
 
+    def clear_cache(self):
+        '''Clears the appointments cache and the in-memory cache of invalid user ID's.'''
+        self.error_cache = []
+        try:
+            self.cache.delete_appts()
+        except Exception as e:
+            self.logger.exception(f'Error clearing appointments table: {e}')
+
 def run_app(app, scheduler):
     '''Function to schedule the app. 
     app should be an instance of LibCal2PP. This function calls the log_new_bookings method.
@@ -176,6 +195,19 @@ def run_app(app, scheduler):
     # Schedule the next run of this function
     scheduler.enter(app.interval, 1, run_app, argument=(app, scheduler))
 
+def get_next_midnight():
+    today = datetime.now()
+    midnight = datetime(today.year, today.month, today.day+1, 0, 0, 0).timestamp()
+    # For testing
+    #midnight = datetime(today.year, today.month, today.day, today.hour + 1, 0, 0).timestamp()
+    return midnight
+
+def cleanup(app, scheduler):
+    '''Schedules daily cleanup of the appointments table. This allows recurring appointments in LibCal to be picked up correctly by the app.'''
+    # Calculate the next midnight's timestamp
+    app.clear_cache()
+
+    scheduler.enterabs(get_next_midnight(), 2, cleanup, argument=(app, scheduler))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -186,6 +218,7 @@ if __name__ == '__main__':
     app.logger.setLevel(args.debug)
     # Initialize sched object
     scheduler = sched.scheduler(time.time, time.sleep)
+    scheduler.enterabs(get_next_midnight(), 2, cleanup, argument=(app, scheduler))
     run_app(app, scheduler)
     # Run the scheduling thread
     scheduler.run()

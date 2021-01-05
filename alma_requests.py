@@ -44,7 +44,8 @@ class AlmaRequests():
 
 
     def main(self, user_ids: List[str]):
-        '''Function to run async loop. Argument should be a list of user IDs to retrieve in Alma.'''
+        '''Function to run async loop. Argument should be a list of user IDs to retrieve in Alma.
+        Returns 1) barcode and other data for users with matching records in an IZ, and 2) users with no match in any IZ.'''
         user_data = {}
         # Loop through available Alma API keys in order. Allows querying of multiple IZ's.
         for apikey in self.apikeys:
@@ -61,9 +62,9 @@ class AlmaRequests():
             if not user_ids:
                 break
         # Log user ID's that could not be found
-        if user_ids:
-            self.logger.error(f"Users could not be found in any IZ: {user_ids}")
-        return user_data
+        #if user_ids:
+        #    self.logger.error(f"Users could not be found in any IZ: {user_ids}")
+        return user_data, user_ids
 
 
     async def _retrieve_user_records(self, user_ids: List[str]):

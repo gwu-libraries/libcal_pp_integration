@@ -40,67 +40,54 @@ class SQLiteCache():
 
     def user_lookup(self, primary_id: str):
         '''Retrieve the user\'s data from the database if it exists.'''
-        try:
-            with self.conn:
-                self.cursor.execute('''
+        with self.conn:
+            self.cursor.execute('''
                                     SELECT * from users 
                                     WHERE primary_id = :primary_id
                                 ''', {'primary_id': primary_id})
-                row = self.cursor.fetchone()
+            row = self.cursor.fetchone()
             # Convert result to a dictionary
             if row:
                 return dict(row)
             return None
-        except Exception as e:
-            self.logger.exception('Error querying users table.')
-            raise
 
     def appt_lookup(self, appt_id: str):
         '''Queries the appointments table for an existing appointment.
         appt_id should be a LibCal bookId.'''
-        try:
-            with self.conn:
-                self.cursor.execute('''
+        with self.conn:
+            self.cursor.execute('''
                                         SELECT * from appts
                                         WHERE appt_id = :appt_id
                                     ''', {'appt_id': appt_id})
-                row = self.cursor.fetchone()
-                if row:
-                    return dict(row)
-                return None
-        except Exception as e:
-            self.logger.exception('Error querying appointments table.')
-            raise
+            row = self.cursor.fetchone()
+            if row:
+                return dict(row)
+            return None
 
     def add_users(self, user_data: List[Dict[str, str]]):
         '''Adds users to the users table.
         user_data should be a list of dictionaries, each containing the user\'s Alma primary ID, barcode, and visitor ID (Passage Point).'''
         with self.conn:
-            try:
-                # Current behavior is to replace rows upon violation of the primary key constraint (on the primary ID.) That might be useful if, for instance, a user's visitor ID in Passage Point somehow changes.
-                self.cursor.executemany('''
+            # Current behavior is to replace rows upon violation of the primary key constraint (on the primary ID.) That might be useful if, for instance, a user's visitor ID in Passage Point somehow changes.
+            self.cursor.executemany('''
                                     INSERT OR REPLACE INTO users (primary_id, barcode, visitor_id) 
                                     VALUES (:primary_id, :barcode, :visitor_id)
                                     ''', user_data)
-            except Exception as e:
-                self.logger.exception(f'Error loading users {user_data}')
-                raise
 
     def add_appt(self, appt_data: List[Dict[str, str]]):
         '''Insert a list of mappings from LibCal to PassagePoint appointment IDs. 
         appt_data should contain appt_id (LibCal) and prereg_id (PP) as keys.'''
         with self.conn:
-            try:
-                self.cursor.executemany('''
+            self.cursor.executemany('''
                                         INSERT INTO appts (appt_id, prereg_id) 
                                         VALUES (:appt_id, :prereg_id)
                                     ''', appt_data)
-            except Exception as e:
-                self.logger.exception(f'Error loading appointments {appt_data}.')
-                raise 
 
     def delete_appts(self):
-        pass
+        '''Clears all rows from the appointments table.'''
+        with self.conn:
+            self.logger.debug('Clearing appointments table.')
+            self.cursor.execute('DELETE FROM appts')
 
 if __name__ == '__main__':
     sqc = SQLiteCache()
