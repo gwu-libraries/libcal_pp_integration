@@ -196,10 +196,17 @@ def run_app(app, scheduler):
     scheduler.enter(app.interval, 1, run_app, argument=(app, scheduler))
 
 def get_next_midnight():
+    '''Get the timestamp for the next midnight from now.'''
     today = datetime.now()
-    midnight = datetime(today.year, today.month, today.day+1, 0, 0, 0).timestamp()
-    # For testing
-    #midnight = datetime(today.year, today.month, today.day, today.hour + 1, 0, 0).timestamp()
+    try:
+        midnight = datetime(today.year, today.month, today.day+1, 0, 0, 0).timestamp()
+    except ValueError:
+        # If the day is out of range, need to get the next month
+        # Check for December 31
+        if today.month == 12 and today.day == 31:
+            midnight = datetime(today.year+1, 1, 1, 0, 0, 0).timestamp()
+        else:
+            midnight = datetime(today.year, today.month+1, 1, 0, 0, 0).timestamp()
     return midnight
 
 def cleanup(app, scheduler):
